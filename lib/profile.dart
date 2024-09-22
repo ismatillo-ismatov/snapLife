@@ -168,7 +168,7 @@ class _ProfilePageState extends State<ProfilePage>{
                 ),
 
 
-                Text('${widget.userProfile.posts.length}\nPosts'),
+                Text('${widget.userProfile.posts.length}\nPost'),
                 Text("222\nFallowers"),
                 Text("222\nFallowing"),
 
