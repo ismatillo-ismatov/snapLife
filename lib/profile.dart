@@ -22,7 +22,7 @@ class Post {
     required this.postText,
     this.isLike = false,
     this.save = false,
-});
+  });
 }
 
 class UserProfile {
@@ -41,56 +41,45 @@ class UserProfile {
 
 class ProfilePage extends StatefulWidget {
   final UserProfile userProfile;
-  const ProfilePage({Key? key, required this.userProfile}):super(key: key);
+  const ProfilePage({Key? key, required this.userProfile}) : super(key: key);
   // UserProfile userProfile;
   // ProfilePage({required this.userProfile});
   @override
   _ProfilePageState createState() => _ProfilePageState();
+}
 
-
-
-  }
-
-class _ProfilePageState extends State<ProfilePage>{
+class _ProfilePageState extends State<ProfilePage> {
   bool isExpended = false;
   void initState() {
     super.initState();
     ProfilePage(
-    userProfile: UserProfile(
-        userId: 1,
-        userName: "ismatov-ismatillo",
-        userImage: "assets/images/ismatov.jpg",
-        posts: [
-          Post(
-              id: 1,
-              profileImage: 'assets/images/ismatov.jpg',
-              imagePath: 'assets/images/3.jpg',
-              postTitle: "hello everyone",
-              postText: "Agar matn uzun bo‘lsa va faqat boshlang‘ich ikkita qatorni ko‘rsatib, qolgan qismini 'Continue reading' tugmasini bosganida"
-          ),
-          Post(
-            id: 2,
-            profileImage: "assets/images/ismatov.jpg",
-            imagePath: 'assets/images/4.jpg',
-            postTitle: "hello",
-            postText: "asdadwdasdawdasdawdasdawd",
-          )
-        ]
-    ),
+      userProfile: UserProfile(
+          userId: 1,
+          userName: "ismatov-ismatillo",
+          userImage: "assets/images/ismatov.jpg",
+          posts: [
+            Post(
+                id: 1,
+                profileImage: 'assets/images/ismatov.jpg',
+                imagePath: 'assets/images/3.jpg',
+                postTitle: "hello everyone",
+                postText:
+                    "Agar matn uzun bo‘lsa va faqat boshlang‘ich ikkita qatorni ko‘rsatib, qolgan qismini 'Continue reading' tugmasini bosganida"),
+          ]),
     );
   }
 
-
-  void _toggleLike(int id){
+  void _toggleLike(int id) {
     setState(() {
       Post post = widget.userProfile.posts.firstWhere((post) => post.id == id);
       post.isLike = !post.isLike;
     });
 
-  void _toggleSave(int id){
-    setState(() {
-      Post post = widget.userProfile.posts.firstWhere((post) => post.id == id);
-      post.save = !post.save;
+    void _toggleSave(int id) {
+      setState(() {
+        Post post =
+            widget.userProfile.posts.firstWhere((post) => post.id == id);
+        post.save = !post.save;
       });
     }
   }
@@ -99,180 +88,169 @@ class _ProfilePageState extends State<ProfilePage>{
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       scrollDirection: Axis.vertical,
-
       child: Column(
-        children:[
+        children: [
           Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 10.0,
-                  vertical: 30.0
-              ),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10.0, vertical: 30.0),
             child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(widget.userProfile.userName,
-              style: TextStyle(fontSize: 20),),
-              SizedBox(
-                width: 20,
-              ),
-              IconButton(
-                icon: const Icon(FontAwesomeIcons.threads),
-                onPressed: () {
-
-                },
-              ),
-
-              IconButton(
-                icon: const Icon(
-                    Icons.add_circle_outline_outlined),
-                onPressed: () {
-
-                },
-              ),
-              IconButton(
-                icon: Icon(Icons.clear_all),
-                onPressed: () {},
-              ),
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  widget.userProfile.userName,
+                  style: TextStyle(fontSize: 20),
+                ),
+                SizedBox(
+                  width: 20,
+                ),
+                IconButton(
+                  icon: const Icon(FontAwesomeIcons.threads),
+                  onPressed: () {},
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add_circle_outline_outlined),
+                  onPressed: () {},
+                ),
+                IconButton(
+                  icon: Icon(Icons.clear_all),
+                  onPressed: () {},
+                ),
               ],
             ),
-
           ),
           SizedBox(
             height: 10,
           ),
           Padding(
-              padding: EdgeInsets.symmetric(vertical: 10),
+            padding: EdgeInsets.symmetric(vertical: 10),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 Padding(
-                    padding: const EdgeInsets.only(right: 20),
+                  padding: const EdgeInsets.only(right: 20),
                 ),
                 Transform.translate(
-                    offset: Offset(-30, 0),
-                child: Container(
-                  height: 80,
-                  width: 80,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color:Colors.white),
-                    image: DecorationImage(
-                        image:AssetImage(widget.userProfile.userImage),
-                      fit: BoxFit.cover,
+                  offset: Offset(-30, 0),
+                  child: Container(
+                    height: 80,
+                    width: 80,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white),
+                      image: DecorationImage(
+                        image: AssetImage(widget.userProfile.userImage),
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
-
-
-
                 ),
-                ),
-
-
                 Text('${widget.userProfile.posts.length}\nPost'),
                 Text("222\nFallowers"),
                 Text("222\nFallowing"),
-
               ],
-              
-
             ),
-
-
           ),
-
           Padding(
             padding: const EdgeInsets.only(right: 220),
             child: Text(widget.userProfile.userName),
           ),
           Stack(
-          children: [
-
-            Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              // Transform.translate(offset: Offset(-120, 0),
-              Container(
-                height: 25,
-                width: 130,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(10),
-                    topRight: Radius.circular(10),
-                    bottomLeft: Radius.circular(10),
-                    bottomRight: Radius.circular(10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  // Transform.translate(offset: Offset(-120, 0),
+                  Container(
+                    height: 25,
+                    width: 130,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(10),
+                        topRight: Radius.circular(10),
+                        bottomLeft: Radius.circular(10),
+                        bottomRight: Radius.circular(10),
+                      ),
+                      border: Border.all(color: Colors.black),
+                    ),
+                    child: const Center(
+                      child: Text('Edit Profile'),
+                    ),
                   ),
-                  border: Border.all(color: Colors.black),
-
-                ),
-                child: const Center(
-                child: Text('Edit Profile'),
-                ),
-
-              ),
-              // ),
-              Container(
-                height: 25,
-                width: 130,
-                decoration:  BoxDecoration(
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(10),
-                    topRight: Radius.circular(10),
-                    bottomRight: Radius.circular(10),
-                    bottomLeft: Radius.circular(10),
+                  // ),
+                  Container(
+                    height: 25,
+                    width: 130,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(10),
+                        topRight: Radius.circular(10),
+                        bottomRight: Radius.circular(10),
+                        bottomLeft: Radius.circular(10),
+                      ),
+                      border: Border.all(color: Colors.black),
+                    ),
+                    child: const Center(
+                      child: Text("Share profile"),
+                    ),
                   ),
-                  border: Border.all(color: Colors.black),
-                ),
-                child: const  Center(
-                  child: Text("Share profile"),
-                ),
+                  IconButton(
+                    icon: Icon(MdiIcons.accountPlusOutline),
+                    onPressed: () {},
+                  )
+                ],
               ),
-              IconButton(
-                  icon:Icon(MdiIcons.accountPlusOutline),
-                onPressed: (){
-
-                },
-              )
             ],
-
-          ),
-    ],
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               IconButton(
-                icon: const  Icon(Icons.calendar_month_outlined),
-                onPressed: (){
-
-
-                },
-                iconSize: 40,
-
-              ),
-              IconButton(
-                  icon: Icon(Icons.add_to_queue_sharp),
-                onPressed: (){
-
-                },
+                icon: const Icon(Icons.calendar_month_outlined),
+                onPressed: () {},
                 iconSize: 40,
               ),
               IconButton(
-                  icon: Icon(Icons.assessment),
-                onPressed: (){
-
-                },
-
+                icon: Icon(Icons.add_to_queue_sharp),
+                onPressed: () {},
+                iconSize: 40,
               ),
-
+              IconButton(
+                icon: Icon(Icons.perm_contact_cal_outlined),
+                onPressed: () {},
+                iconSize: 40,
+              ),
             ],
-
           ),
-
-],
+          Container(
+            height: 2,
+            width: 400,
+            color: Colors.grey,
+          ),
+          GridView.builder(
+              shrinkWrap: true,
+              physics: NeverScrollableScrollPhysics(),
+              itemCount: widget.userProfile.posts.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 1.0,
+                mainAxisSpacing: 1.0,
+                childAspectRatio: 1,
               ),
-
-
-              );
-
+              itemBuilder: (context, index) {
+                return Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.black),
+                    image: DecorationImage(
+                        image: AssetImage(
+                            widget.userProfile.posts[index].imagePath),
+                        fit: BoxFit.cover),
+                  ),
+                );
+              })
+        ],
+      ),
+    );
   }
 }
