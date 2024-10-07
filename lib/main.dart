@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:instagram_clone/home.dart' as home;
-import 'package:instagram_clone/profile.dart' as profile;
+import 'package:instagram_clone/forms/Edit-profile.dart';
+import 'package:instagram_clone/widgets/home.dart';
+import 'package:instagram_clone/widgets/profile.dart';
+import 'package:instagram_clone/widgets/search.dart'as search;
+import 'package:instagram_clone/widgets/posts.dart';
+import 'package:instagram_clone/models/post.dart';
+import 'package:instagram_clone/models/userProfile.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
@@ -15,126 +20,101 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   int _selectedIndex = 0;
-  //    profile.UserProfile userProfile = profile.UserProfile(
-  //     userId:1,
-  //     userName: "ismatov",
-  //     posts:[
-  //       profile.Post(
-  //           id: 1,
-  //           profileImage: 'assets/images/ismatov.jpg',
-  //           postTitle: "hello",
-  //           imagePath: 'assets/images/3.jpg',
-  //           postText: "gsadgadgadgawygdqaydgadgagdw"
-  //       ),
-  //     ],
-  // );
-
-  static List<Widget> _pages = <Widget>[
-    home.HomePage(),
-    const Center(child: Text("hello")),
-    const Center(child: Text("hello")),
-    const Center(child: Text("hello")),
-    profile.ProfilePage(
-      userProfile: profile.UserProfile(
-        userId: 1,
-        userName: 'ismatov-ismatillo',
-        userImage: "assets/images/ismatov.jpg",
-        posts: [
-          profile.Post(
-            id: 1,
-            profileImage: "assets/images/ismatov.jpg",
-            imagePath: 'assets/images/2.jpg',
-            postTitle: "hello",
-            postText: "asdadwdasdawdasdawdasdawd",
-          ),
-          profile.Post(
-            id: 2,
-            profileImage: "assets/images/ismatov.jpg",
-            imagePath: 'assets/images/2.jpg',
-            postTitle: "hello",
-            postText: "asdadwdasdawdasdawdasdawd",
-          ),
-          profile.Post(
-            id: 3,
-            profileImage: "assets/images/ismatov.jpg",
-            imagePath: 'assets/images/3.jpg',
-            postTitle: "hello",
-            postText: "asdadwdasdawdasdawdasdawd",
-          ),
-          profile.Post(
-            id: 4,
-            profileImage: "assets/images/ismatov.jpg",
-            imagePath: 'assets/images/4.jpg',
-            postTitle: "hello",
-            postText: "asdadwdasdawdasdawdasdawd",
-          ),
-          profile.Post(
-            id: 5,
-            profileImage: "assets/images/ismatov.jpg",
-            imagePath: 'assets/images/4.jpg',
-            postTitle: "hello",
-            postText: "asdadwdasdawdasdawdasdawd",
-          ),
-          profile.Post(
-            id: 5,
-            profileImage: "assets/images/ismatov.jpg",
-            imagePath: 'assets/images/4.jpg',
-            postTitle: "hello",
-            postText: "asdadwdasdawdasdawdasdawd",
-          ),
-          profile.Post(
-            id: 5,
-            profileImage: "assets/images/ismatov.jpg",
-            imagePath: 'assets/images/4.jpg',
-            postTitle: "hello",
-            postText: "asdadwdasdawdasdawdasdawd",
-          ),
-          profile.Post(
-            id: 5,
-            profileImage: "assets/images/ismatov.jpg",
-            imagePath: 'assets/images/4.jpg',
-            postTitle: "hello",
-            postText: "asdadwdasdawdasdawdasdawd",
-          ),
-          profile.Post(
-            id: 5,
-            profileImage: "assets/images/ismatov.jpg",
-            imagePath: 'assets/images/4.jpg',
-            postTitle: "hello",
-            postText: "asdadwdasdawdasdawdasdawd",
-          ),
-          profile.Post(
-            id: 5,
-            profileImage: "assets/images/ismatov.jpg",
-            imagePath: 'assets/images/4.jpg',
-            postTitle: "hello",
-            postText: "asdadwdasdawdasdawdasdawd",
-          ),
-          profile.Post(
-            id: 5,
-            profileImage: "assets/images/ismatov.jpg",
-            imagePath: 'assets/images/4.jpg',
-            postTitle: "hello",
-            postText: "asdadwdasdawdasdawdasdawd",
-          ),
-          profile.Post(
-            id: 5,
-            profileImage: "assets/images/ismatov.jpg",
-            imagePath: 'assets/images/4.jpg',
-            postTitle: "hello",
-            postText: "asdadwdasdawdasdawdasdawd",
-          ),
-          profile.Post(
-            id: 5,
-            profileImage: "assets/images/ismatov.jpg",
-            imagePath: 'assets/images/4.jpg',
-            postTitle: "hello",
-            postText: "asdadwdasdawdasdawdasdawd",
-          ),
-        ],
-      ),
-    ),
-  ];
+  final UserProfile userProfile = UserProfile(
+      userId: 1,
+      userName: 'ismatilloismatov',
+      userImage: "assets/images/ismatov.jpg",
+      posts: [
+        Post(
+          id: 1,
+          userName: "ismatov",
+          profileImage: "assets/images/ismatov.jpg",
+          imagePath: 'assets/images/2.jpg',
+          postTitle: "hello",
+          postText: "Agar matn uzun bo‘lsa va faqat boshlang‘ich ikkita qatorni ko‘rsatib, qolgan qismini Continue reading tugmasini bosganida ko‘rsatishni xohlasangiz, Text vidjetida maxLines va TextOverflow.ellipsis parametrlari bilan ishlash mumkin. Shuningdek, uzun matnni yashirish va ochish uchun bool qiymatidan foydalanasiz."
+        ),
+        Post(
+          id: 2,
+          userName: "ismatov",
+          profileImage: "assets/images/ismatov.jpg",
+          imagePath: 'assets/images/3.jpg',
+          postTitle: "hello",
+          postText: "Agar matn uzun bo‘lsa va faqat boshlang‘ich ikkita qatorni ko‘rsatib, qolgan qismini Continue reading tugmasini bosganida ko‘rsatishni xohlasangiz, Text vidjetida maxLines va TextOverflow.ellipsis parametrlari bilan ishlash mumkin. Shuningdek, uzun matnni yashirish va ochish uchun bool qiymatidan foydalanasiz",
+        ),
+        Post(
+          id: 3,
+          userName: "ismatov",
+          profileImage: "assets/images/ismatov.jpg",
+          imagePath: 'assets/images/3.jpg',
+          postTitle: "hello",
+          postText: "asdadwdasdawdasdawdasdawd",
+        ),
+        Post(
+          id: 4,
+          userName: "ismatov",
+          profileImage: "assets/images/ismatov.jpg",
+          imagePath: 'assets/images/4.jpg',
+          postTitle: "hello",
+          postText: "asdadwdasdawdasdawdasdawd",
+        ),
+        Post(
+          id: 1,
+          userName: "ismatov",
+          profileImage: "assets/images/ismatov.jpg",
+          imagePath: 'assets/images/2.jpg',
+          postTitle: "hello",
+          postText: "asdadwdasdawdasdawdasdawd",
+        ),
+        Post(
+          id: 1,
+          userName: "ismatov",
+          profileImage: "assets/images/ismatov.jpg",
+          imagePath: 'assets/images/2.jpg',
+          postTitle: "hello",
+          postText: "asdadwdasdawdasdawdasdawd",
+        ),
+        Post(
+          id: 1,
+          userName: "ismatov",
+          profileImage: "assets/images/ismatov.jpg",
+          imagePath: 'assets/images/2.jpg',
+          postTitle: "hello",
+          postText: "asdadwdasdawdasdawdasdawd",
+        ),
+        Post(
+          id: 1,
+          userName: "ismatov",
+          profileImage: "assets/images/ismatov.jpg",
+          imagePath: 'assets/images/2.jpg',
+          postTitle: "hello",
+          postText: "asdadwdasdawdasdawdasdawd",
+        ),
+        Post(
+          id: 1,
+          userName: "ismatov",
+          profileImage: "assets/images/ismatov.jpg",
+          imagePath: 'assets/images/2.jpg',
+          postTitle: "hello",
+          postText: "asdadwdasdawdasdawdasdawd",
+        ),
+        Post(
+          id: 1,
+          userName: "ismatov",
+          profileImage: "assets/images/ismatov.jpg",
+          imagePath: 'assets/images/2.jpg',
+          postTitle: "hello",
+          postText: "asdadwdasdawdasdawdasdawd",
+        ),
+      ]);
+  List<Widget> _pages() {
+    return [
+      HomePage(),
+      search.SearchBarApp(),
+      const Center(child: Text("hello")),
+      const Center(child: Text("hello")),
+      ProfilePage(userProfile: userProfile),
+    ];
+  }
 
   void _onItemsTapped(int index) {
     setState(() {
@@ -291,7 +271,7 @@ class _MyAppState extends State<MyApp> {
                 ),
               )
             : null,
-        body: _pages[_selectedIndex],
+        body: _pages()[_selectedIndex],
         bottomNavigationBar: BottomNavigationBar(
           unselectedIconTheme: const IconThemeData(
             size: 25,
