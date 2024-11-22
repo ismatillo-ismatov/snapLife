@@ -8,6 +8,10 @@ class Post {
   final String content;
   final String? postImage;
   final String postDate;
+  bool isLiked;
+  bool save;
+
+
 
   Post({
     required this.id,
@@ -15,6 +19,8 @@ class Post {
     required this.content,
     this.postImage,
     required this.postDate,
+    this.isLiked = false,
+    this.save = false,
 
 });
 
@@ -25,12 +31,15 @@ class Post {
       content: json['content'],
       postImage: json['postImage'],
       postDate: json['postDate'],
+      isLiked: json['isLiked'],
+      save: json['save'],
     );
   }
 
 }
-//
-//
+
+
+
 // class Post {
 //   final int id;
 //   final String userName;

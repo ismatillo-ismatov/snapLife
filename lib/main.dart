@@ -1,15 +1,24 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'package:ismatov/api/api_service.dart';
 import 'package:ismatov/widgets/home.dart';
 import 'package:ismatov/widgets/profile.dart';
 import 'package:ismatov/widgets/search.dart'as search;
 import 'package:ismatov/widgets/posts.dart';
 import 'package:ismatov/models/post.dart';
 import 'package:ismatov/models/userProfile.dart';
+import 'package:ismatov/forms/loginPage.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Hive.initFlutter();
   runApp(MyApp());
+
 }
 
 class MyApp extends StatefulWidget {
@@ -19,99 +28,32 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   int _selectedIndex = 0;
-  final UserProfile userProfile = UserProfile(
-      userId: 1,
-      userName: 'ismatilloismatov',
-      userImage: "assets/images/ismatov.jpg",
-      posts: [
-        Post(
-            id: 1,
-            userName: "ismatov",
-            profileImage: "assets/images/ismatov.jpg",
-            imagePath: 'assets/images/2.jpg',
-            postTitle: "hello",
-            postText: "Agar matn uzun bo‘lsa va faqat boshlang‘ich ikkita qatorni ko‘rsatib, qolgan qismini Continue reading tugmasini bosganida ko‘rsatishni xohlasangiz, Text vidjetida maxLines va TextOverflow.ellipsis parametrlari bilan ishlash mumkin. Shuningdek, uzun matnni yashirish va ochish uchun bool qiymatidan foydalanasiz."
-        ),
-        Post(
-          id: 2,
-          userName: "ismatov",
-          profileImage: "assets/images/ismatov.jpg",
-          imagePath: 'assets/images/3.jpg',
-          postTitle: "hello",
-          postText: "Agar matn uzun bo‘lsa va faqat boshlang‘ich ikkita qatorni ko‘rsatib, qolgan qismini Continue reading tugmasini bosganida ko‘rsatishni xohlasangiz, Text vidjetida maxLines va TextOverflow.ellipsis parametrlari bilan ishlash mumkin. Shuningdek, uzun matnni yashirish va ochish uchun bool qiymatidan foydalanasiz",
-        ),
-        Post(
-          id: 3,
-          userName: "ismatov",
-          profileImage: "assets/images/ismatov.jpg",
-          imagePath: 'assets/images/3.jpg',
-          postTitle: "hello",
-          postText: "asdadwdasdawdasdawdasdawd",
-        ),
-        Post(
-          id: 4,
-          userName: "ismatov",
-          profileImage: "assets/images/ismatov.jpg",
-          imagePath: 'assets/images/4.jpg',
-          postTitle: "hello",
-          postText: "asdadwdasdawdasdawdasdawd",
-        ),
-        Post(
-          id: 1,
-          userName: "ismatov",
-          profileImage: "assets/images/ismatov.jpg",
-          imagePath: 'assets/images/2.jpg',
-          postTitle: "hello",
-          postText: "asdadwdasdawdasdawdasdawd",
-        ),
-        Post(
-          id: 1,
-          userName: "ismatov",
-          profileImage: "assets/images/ismatov.jpg",
-          imagePath: 'assets/images/2.jpg',
-          postTitle: "hello",
-          postText: "asdadwdasdawdasdawdasdawd",
-        ),
-        Post(
-          id: 1,
-          userName: "ismatov",
-          profileImage: "assets/images/ismatov.jpg",
-          imagePath: 'assets/images/2.jpg',
-          postTitle: "hello",
-          postText: "asdadwdasdawdasdawdasdawd",
-        ),
-        Post(
-          id: 1,
-          userName: "ismatov",
-          profileImage: "assets/images/ismatov.jpg",
-          imagePath: 'assets/images/2.jpg',
-          postTitle: "hello",
-          postText: "asdadwdasdawdasdawdasdawd",
-        ),
-        Post(
-          id: 1,
-          userName: "ismatov",
-          profileImage: "assets/images/ismatov.jpg",
-          imagePath: 'assets/images/2.jpg',
-          postTitle: "hello",
-          postText: "asdadwdasdawdasdawdasdawd",
-        ),
-        Post(
-          id: 1,
-          userName: "ismatov",
-          profileImage: "assets/images/ismatov.jpg",
-          imagePath: 'assets/images/2.jpg',
-          postTitle: "hello",
-          postText: "asdadwdasdawdasdawdasdawd",
-        ),
-      ]);
-  List<Widget> _pages() {
+  late  Future<UserProfile?> userProfileFuture;
+
+  @override
+  void initState(){
+    super.initState();
+    userProfileFuture = Future.value(null);
+    ApiService().getUserToken().then((token){
+      if (token != null){
+        setState(() {
+          userProfileFuture = ApiService().fetchUserProfile(token);
+        });
+      } else{
+        print("foydalanuvchi login qilmagan");
+      }
+    });
+
+  }
+
+  List<Widget> _pages(UserProfile userProfile) {
     return [
       HomePage(),
-      search.SearchBarApp(),
+      // search.SearchBarApp(),
       const Center(child: Text("hello")),
       const Center(child: Text("hello")),
-      ProfilePage(userProfile: userProfile),
+      const Center(child: Text("hello")),
+      ProfilePage(userProfile: userProfile ),
     ];
   }
 
@@ -133,6 +75,34 @@ class _MyAppState extends State<MyApp> {
             ? AppBar(
           title: Text('Snaplife'),
           actions: [
+            Builder(
+                builder: (context) => IconButton(
+                icon: Icon(FontAwesomeIcons.solidCircleUser),
+                onPressed: () {
+                  Navigator.push(
+                      context,
+                    MaterialPageRoute(
+                        builder:(context) => LoginPage(),
+                    ),
+                  );
+                },
+
+
+      ),
+            ),
+            // IconButton(
+            //     icon: Icon(FontAwesomeIcons.solidCircleUser),
+            //     onPressed:(){
+            //       Future.delayed(Duration.zero,(){
+            //         Navigator.push(
+            //         context,
+            //          MaterialPageRoute(
+            //              builder: (context) => LoginPage()
+            //          ),
+            //          );
+            //       });
+            // }
+            // ),
             IconButton(
               icon: Icon(Icons.favorite_outline_sharp),
               onPressed: () {},
@@ -146,6 +116,7 @@ class _MyAppState extends State<MyApp> {
               onPressed: () {},
             ),
           ],
+
           bottom: PreferredSize(
             preferredSize: Size.fromHeight(80),
             child: Column(
@@ -270,7 +241,23 @@ class _MyAppState extends State<MyApp> {
           ),
         )
             : null,
-        body: _pages()[_selectedIndex],
+        body: FutureBuilder<UserProfile?>(
+          future: userProfileFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator());
+            } else if (snapshot.hasError) {
+              return Center(child: Text('Xatolik: ${snapshot.error}'));
+            } else if (snapshot.hasData) {
+              UserProfile userProfile = snapshot.data!;
+              return _pages(userProfile)[_selectedIndex];
+            } else {
+              return Center(child: Text('Ma\'lumot topilmadi'));
+            }
+          },
+        ),
+
+
         bottomNavigationBar: BottomNavigationBar(
           unselectedIconTheme: const IconThemeData(
             size: 25,

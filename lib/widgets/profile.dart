@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ismatov/api/api_service.dart';
 // import 'package:ismatov/widgets/video_player_widget.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -6,6 +7,7 @@ import 'package:ismatov/widgets/home.dart';
 import 'package:ismatov/models/userProfile.dart';
 import 'package:ismatov/widgets/posts.dart';
 import 'package:ismatov/models/post.dart';
+import 'dart:convert';
 
 
 // class UserProfile {
@@ -25,30 +27,33 @@ import 'package:ismatov/models/post.dart';
 class ProfilePage extends StatefulWidget {
   final UserProfile userProfile;
 
-  const ProfilePage({Key? key, required this.userProfile}) : super(key: key);
+  const ProfilePage({required this.userProfile});
 
   @override
   _ProfilePageState createState() => _ProfilePageState();
 }
 class _ProfilePageState extends State<ProfilePage> {
+  // late Future<UserProfile> userProfileFuture;
   void initState() {
     super.initState();
+
+
   }
 
-  void _toggleLike(int id) {
-    setState(() {
-      Post post = widget.userProfile.posts.firstWhere((post) => post.id == id);
-      post.isLiked = !post.isLiked;
-    });
-
-    void _toggleSave(int id) {
-      setState(() {
-        Post post =
-        widget.userProfile.posts.firstWhere((post) => post.id == id);
-        post.save = !post.save;
-      });
-    }
-  }
+  // void _toggleLike(int id) {
+  //   setState(() {
+  //     Post post = widget.userProfile.posts.firstWhere((post) => post.id == id);
+  //     post.isLiked = !post.isLiked;
+  //   });
+  //
+  //   void _toggleSave(int id) {
+  //     setState(() {
+  //       Post post =
+  //       widget.userProfile.posts.firstWhere((post) => post.id == id);
+  //       post.save = !post.save;
+  //     });
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -105,7 +110,8 @@ class _ProfilePageState extends State<ProfilePage> {
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white),
                       image: DecorationImage(
-                        image: AssetImage(widget.userProfile.userImage),
+                        image: AssetImage(
+                            widget.userProfile.profileImage ?? 'assets/nouser.png'),
                         fit: BoxFit.cover,
                       ),
                     ),
@@ -126,7 +132,6 @@ class _ProfilePageState extends State<ProfilePage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  // Transform.translate(offset: Offset(-120, 0),
                   Container(
                     height: 25,
                     width: 130,
@@ -221,12 +226,12 @@ class _ProfilePageState extends State<ProfilePage> {
                     height: 120,
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.black),
-                      image: widget.userProfile.posts[index].imagePath != null
+                      image: widget.userProfile.posts[index].postImage != null
                           ? DecorationImage(
-                        image: AssetImage(widget.userProfile.posts[index].imagePath!),
+                        image: AssetImage(widget.userProfile.posts[index].postImage!),
                         fit: BoxFit.cover,
                       )
-                          :null,
+                          : null,
                     ),
                     // child: widget.userProfile.posts[index].videoPath !=null
                     //     ? VideoPlayerWidget(videoPath: widget.userProfile.posts[index].videoPath!)
@@ -238,4 +243,5 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
+
 }

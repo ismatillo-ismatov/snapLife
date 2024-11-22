@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:ismatov/widgets/comments_widget.dart';
 // import 'package:video_player/video_player.dart';
+import 'package:ismatov/api/api_service.dart';
 import 'package:ismatov/models/post.dart';
 import 'package:ismatov/widgets/video_player_widget.dart';
 
@@ -12,6 +13,30 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  List<Post> posts = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchPosts();
+  }
+  Future<void>fetchPosts()async {
+    try{
+      final apiService = ApiService();
+      List<Post>fetchedPosts = await apiService.fetchPosts();
+      setState(() {
+        posts = fetchedPosts;
+        isLoading = false;
+      });
+    }
+    catch (e) {
+      print("error loading posts: $e");
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
 
   void _toggleLike(int id) {
     setState(() {
@@ -29,6 +54,9 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading){
+      return Center(child: CircularProgressIndicator());
+    }
     return SingleChildScrollView(
       scrollDirection: Axis.vertical,
       child: Column(
@@ -65,6 +93,7 @@ class _PostWidgetState extends State<PostWidget>{
   bool isExpended = false;
   @override
   Widget build(BuildContext context) {
+    final fullImageUrl = 'http://127.0.0.1:8000/api/media/post_image/' + (widget.post.postImage ?? '');
     return Column(
       children: [
         Container(
@@ -76,13 +105,13 @@ class _PostWidgetState extends State<PostWidget>{
           ),
           child: Stack(
             children: [
-              widget.post.imagePath != null
+              widget.post.postImage != null
                   ? Container(
                 height: double.infinity,
                 width: double.infinity,
                 decoration: BoxDecoration(
                   image: DecorationImage(
-                    image: AssetImage(widget.post.imagePath!),
+                    image: AssetImage(widget.post.postImage!),
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -100,7 +129,7 @@ class _PostWidgetState extends State<PostWidget>{
                 top: 20,
                 left: 80,
                 child: Text(
-                  widget.post.userName,
+                  widget.post.owner.toString(),
                   style: TextStyle(color: Colors.white,fontSize:18),
                 ),
               ),
@@ -115,7 +144,7 @@ class _PostWidgetState extends State<PostWidget>{
                     shape: BoxShape.circle,
                     border:Border.all(color:Colors.white,width: 2),
                     image: DecorationImage(
-                      image: AssetImage(widget.post.profileImage),
+                      image: NetworkImage(fullImageUrl),
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -144,22 +173,22 @@ class _PostWidgetState extends State<PostWidget>{
                   widget.toggleLike(widget.post.id);
                 },
               ),
-              IconButton(
-                icon: SvgPicture.asset('assets/svgs/comment.svg',
-                  height: 35,
-                  width: 35,
-                ),
-                onPressed: (){
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            CommentsPage(post: widget.post),
-                      )
-                  );
-                },
+              // IconButton(
+              //   icon: SvgPicture.asset('assets/svgs/comment.svg',
+              //     height: 35,
+              //     width: 35,
+              //   ),
+                // onPressed: (){
+                //   Navigator.push(
+                //       context,
+                //       MaterialPageRoute(
+                //         builder: (context) =>
+                //             CommentsPage(post: widget.post),
+                //       )
+                //   );
+                // },
 
-              ),
+              // ),
               IconButton(
                 icon: SvgPicture.asset('assets/svgs/share.svg',
                   height: 27,
@@ -202,11 +231,11 @@ class _PostWidgetState extends State<PostWidget>{
                   child: Column(
                     children: [
                       Text(
-                        widget.post.userName,
+                        widget.post.owner.toString(),
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                       Text(
-                          widget.post.postText,
+                          widget.post.content,
                           maxLines: isExpended ? null :2,
                           overflow: isExpended
                               ? TextOverflow.visible

@@ -69,9 +69,9 @@ class _PostPageState extends State<PostPage> {
                             decoration: BoxDecoration(
                               color: Colors.white,
                               border: Border.all(color: Colors.greenAccent),
-                              image: post.imagePath != null
+                              image: post.postImage != null
                                   ?DecorationImage(
-                                image: AssetImage(post.imagePath!),
+                                image: AssetImage(post.postImage!),
                                 fit: BoxFit.cover,
                               ) :null,
                             ),
@@ -86,23 +86,23 @@ class _PostPageState extends State<PostPage> {
                                       top: 20,
                                     ),
                                     child: Text(
-                                      post.userName,
+                                      post.owner.toString(),
                                       style: TextStyle(color: Colors.white),
                                     ),
                                   ),
-                                  Container(
-                                    margin: EdgeInsets.all(20),
-                                    width: 50,
-                                    height: 50,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(color: Colors.white, width: 2),
-                                      image: DecorationImage(
-                                        image: AssetImage(post.profileImage),
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                                  ),
+                                  // Container(
+                                  //   margin: EdgeInsets.all(20),
+                                  //   width: 50,
+                                  //   height: 50,
+                                  //   decoration: BoxDecoration(
+                                  //     shape: BoxShape.circle,
+                                  //     border: Border.all(color: Colors.white, width: 2),
+                                  //     image: DecorationImage(
+                                  //       image: AssetImage(post.profileImage),
+                                  //       fit: BoxFit.cover,
+                                  //     ),
+                                  //   ),
+                                  // ),
                                 ],
                               ),
                             ),
@@ -172,9 +172,9 @@ class _PostPageState extends State<PostPage> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(post.userName),
+                                      Text(post.owner.toString()),
                                       Text(
-                                        post.postText,
+                                        post.content,
                                         maxLines: isExpanded ? null : 2,
                                         overflow: isExpanded
                                             ? TextOverflow.visible
