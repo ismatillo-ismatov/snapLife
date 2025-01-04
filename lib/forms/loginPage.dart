@@ -4,6 +4,7 @@ import 'package:ismatov/api/api_service.dart';
 import 'package:flutter/material.dart';
 import "package:ismatov/forms/registerForm.dart";
 import 'package:ismatov/models/userProfile.dart';
+import 'package:ismatov/main.dart';
 import 'package:ismatov/widgets/home.dart';
 import 'package:ismatov/widgets/profile.dart';
 
@@ -29,7 +30,7 @@ class _LoginPageState extends State<LoginPage>{
         Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => ProfilePage(userProfile: userProfile),)
+              builder: (context) => MainApp(userProfile: userProfile),)
         );
         print("Login successful");
       } catch(e){
@@ -44,21 +45,7 @@ class _LoginPageState extends State<LoginPage>{
 
 
       }
-      // if(loginSuccessful){
-      //   void _onLoginSuccessful(UserProfile userProfile){
-      //     print('Login successful');
-      //     Navigator.pushReplacement(
-      //         context,
-      //         MaterialPageRoute(
-      //           builder: (context) => ProfilePage(userProfile: userProfile),)
-      //     );
-      //     print("Login successful");
-      //   }
-      // } else{
-      //   ScaffoldMessenger.of(context).showSnackBar(
-      //     SnackBar(content: Text("Login failed")),
-      //   );
-      // }
+
 
 
   @override

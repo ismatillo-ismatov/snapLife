@@ -13,43 +13,103 @@ import 'package:ismatov/models/userProfile.dart';
 import 'package:ismatov/forms/loginPage.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
-  runApp(MyApp());
-
+  await Hive.openBox('userBox');
+  var userBox = Hive.box('userbox');
+  bool isLoggedIn = userBox.containsKey('userProfile');
+  runApp(
+      ScreenUtilInit(
+      designSize: const Size(414,896),
+      builder: (context, child) => MyApp(),
+      ),
+      );
 }
 
-class MyApp extends StatefulWidget {
+class MyApp extends StatelessWidget {
   @override
-  _MyAppState createState() => _MyAppState();
+  Widget build(BuildContext context){
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'SnapLife',
+      theme: ThemeData(
+          scaffoldBackgroundColor: Colors.white, primaryColor: Colors.white10),
+      home: AuthHandler(),
+    );
+  }
+
+
+}
+class AuthHandler extends StatelessWidget{
+  Future<bool>_isLoggedIn() async{
+    var userBox = Hive.box('userBox');
+    String? token = userBox.get('userToken');
+    return token != null && token.isNotEmpty;
+  }
+  @override
+  Widget build(BuildContext context){
+    return FutureBuilder<bool>(
+      future: _isLoggedIn(),
+      builder: (context,snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting){
+          return Center(child: CircularProgressIndicator());
+        } else if(snapshot.data == true) {
+          return MainApp();
+        } else {
+          return LoginPage();
+        }
+      }
+    );
+  }
+}
+class MainApp extends StatefulWidget{
+  @override
+  final UserProfile? userProfile;
+  MainApp({Key? key, this.userProfile}): super(key:key);
+
+  @override
+  _MainAppState createState() => _MainAppState();
+
 }
 
-class _MyAppState extends State<MyApp> {
+class _MainAppState extends State<MainApp> {
   int _selectedIndex = 0;
-  late  Future<UserProfile?> userProfileFuture;
+  UserProfile? userProfile;
 
   @override
   void initState(){
     super.initState();
-    userProfileFuture = Future.value(null);
-    ApiService().getUserToken().then((token){
-      if (token != null){
+    _fetchUserProfile();
+  }
+
+
+
+  void _fetchUserProfile() async {
+    String? token = await ApiService().getUserToken();
+    if(token != null){
+      try{
+        UserProfile profile = await ApiService().fetchUserProfile(token);
         setState(() {
-          userProfileFuture = ApiService().fetchUserProfile(token);
+          userProfile = profile;
         });
-      } else{
-        print("foydalanuvchi login qilmagan");
+      } catch(e){
+        print("User profile olishda xatolik:  $e");
       }
-    });
+    }else{
+      print('Foydalanuvchi login qilmagan');
+    }
 
   }
 
+
   List<Widget> _pages(UserProfile userProfile) {
     return [
-      HomePage(),
+      // HomePage(),
       // search.SearchBarApp(),
+      const Center(child: Text("hello")),
       const Center(child: Text("hello")),
       const Center(child: Text("hello")),
       const Center(child: Text("hello")),
@@ -65,15 +125,12 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Instagram',
-      theme: ThemeData(
-          scaffoldBackgroundColor: Colors.white, primaryColor: Colors.black),
-      home: Scaffold(
+
+      return Scaffold(
         appBar: _selectedIndex == 0
             ? AppBar(
           title: Text('Snaplife'),
+
           actions: [
             Builder(
                 builder: (context) => IconButton(
@@ -82,7 +139,8 @@ class _MyAppState extends State<MyApp> {
                   Navigator.push(
                       context,
                     MaterialPageRoute(
-                        builder:(context) => LoginPage(),
+                        builder:(context) => LoginPage(
+                        ),
                     ),
                   );
                 },
@@ -90,19 +148,6 @@ class _MyAppState extends State<MyApp> {
 
       ),
             ),
-            // IconButton(
-            //     icon: Icon(FontAwesomeIcons.solidCircleUser),
-            //     onPressed:(){
-            //       Future.delayed(Duration.zero,(){
-            //         Navigator.push(
-            //         context,
-            //          MaterialPageRoute(
-            //              builder: (context) => LoginPage()
-            //          ),
-            //          );
-            //       });
-            // }
-            // ),
             IconButton(
               icon: Icon(Icons.favorite_outline_sharp),
               onPressed: () {},
@@ -129,8 +174,8 @@ class _MyAppState extends State<MyApp> {
                     child: Row(
                       children: [
                         Container(
-                          height: 80,
-                          width: 80,
+                          height: 80.h,
+                          width: 80.w,
                           decoration: BoxDecoration(
                             color: Color(0xfff6f7f9),
                             border: Border.all(color: Colors.red),
@@ -241,52 +286,39 @@ class _MyAppState extends State<MyApp> {
           ),
         )
             : null,
-        body: FutureBuilder<UserProfile?>(
-          future: userProfileFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Center(child: CircularProgressIndicator());
-            } else if (snapshot.hasError) {
-              return Center(child: Text('Xatolik: ${snapshot.error}'));
-            } else if (snapshot.hasData) {
-              UserProfile userProfile = snapshot.data!;
-              return _pages(userProfile)[_selectedIndex];
-            } else {
-              return Center(child: Text('Ma\'lumot topilmadi'));
-            }
-          },
+        body: userProfile == null
+            ? Center(child: CircularProgressIndicator())
+            : (_selectedIndex < _pages(userProfile!).length
+            ? _pages(userProfile!)[_selectedIndex]
+            : Center(child: Text('notorgi index'),)
+
+        // body: userProfile == null
+        //   ? Center(child: CircularProgressIndicator())
+        //   : _pages(userProfile!)[_selectedIndex],
         ),
-
-
         bottomNavigationBar: BottomNavigationBar(
           unselectedIconTheme: const IconThemeData(
             size: 25,
           ),
           type: BottomNavigationBarType.fixed,
           items: const <BottomNavigationBarItem>[
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: ''),
+            BottomNavigationBarItem(icon: Icon(Icons.home),label:''),
+            BottomNavigationBarItem(icon: Icon(Icons.search),label:''),
+            BottomNavigationBarItem(icon: Icon(Icons.add),label:''),
+            BottomNavigationBarItem(icon: Icon(Icons.ondemand_video),label:''),
             BottomNavigationBarItem(
-              icon: Icon(
-                Icons.search,
-              ),
+                icon: Icon(FontAwesomeIcons.circleUser),
               label: '',
             ),
-            BottomNavigationBarItem(icon: Icon(Icons.add), label: ''),
-            BottomNavigationBarItem(
-                icon: Icon(Icons.ondemand_video), label: ''),
-            BottomNavigationBarItem(
-              icon: Icon(
-                FontAwesomeIcons.circleUser,
-                // size: 30.0,
-              ),
-              label: '',
-            )
           ],
           currentIndex: _selectedIndex,
           selectedItemColor: Colors.white,
           onTap: _onItemsTapped,
-        ),
-      ),
+        )
     );
+
+
+
+
   }
 }

@@ -4,14 +4,14 @@ class UserProfile {
   final int id;
   final String userName;
   final String gender;
-  List<Post> posts;
   final String? profileImage;
   final String? phone;
   final String? dob;
+  final List<Post> posts;
 
   UserProfile({
     required this.id,
-    required this.userName,
+    required this.userName, 
     required this.gender,
     this.profileImage,
     this.phone,
@@ -22,12 +22,16 @@ class UserProfile {
 
   factory UserProfile.fromJson(Map<String,dynamic>json){
     return UserProfile(
-        id: json['id']?? 0,
-        userName: json['userName'].toString() ,
+        id: json['id'],
+        userName: json['userName'] ,
         gender: json['gender'],
         profileImage: json['profileImage'],
         phone: json['phone'],
-        posts: json['posts'],
+        dob: json['dob'],
+        posts: json['posts'] != null
+        ? (json ['posts'] as List<dynamic>)
+            .map((post) => Post.fromJson(post)).toList()
+            : [],
     );
   }
 
@@ -36,16 +40,3 @@ class UserProfile {
 
 
 
-// class UserProfile {
-//   final int userId;
-//   final String userName;
-//   final String userImage;
-//   final List<Post> posts;
-//
-//   UserProfile({
-//     required this.userId,
-//     required this.userName,
-//     required this.userImage,
-//     required this.posts,
-//   });
-// }

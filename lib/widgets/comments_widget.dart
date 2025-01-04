@@ -1,170 +1,239 @@
-// import 'package:flutter/material.dart';
-// // import 'package:ismatov/forms/Edit-profile.dart';
-// import 'package:ismatov/models/post.dart';
-// import 'package:ismatov/models/comments.dart';
-// import 'package:ismatov/models/post.dart';
-// import 'package:ismatov/models/userProfile.dart';
-//
-//
-// class CommentsPage extends StatefulWidget{
-//   final Post post;
-//   const CommentsPage({ Key? key, required this.post}): super(key: key);
-//   @override
-//   _CommentsPageState createState() => _CommentsPageState();
-// }
-// class _CommentsPageState extends State<CommentsPage> {
-//   void _toggleLike(int commentId, Comments parentComment){
-//     setState(() {
-//       Comments comments = parentComment.replies.firstWhere((c) => c.commentId == commentId, orElse: () => parentComment);
-//       comments.isLiked = !comments.isLiked;
-//     });
-//   }
-//   void _addReply(int commentId,String replyText){
-//     setState(() {
-//       Comments parentComment = widget.post.comments.firstWhere((c) => c.commentId == commentId);
-//       parentComment.replies.add(
-//         Comments(
-//             commentId: widget.post.comments.length + parentComment.replies.length + 1,
-//             user: widget.post.userName,
-//             commentImage: widget.post.profileImage,
-//             commentText: replyText,
-//             timestamp: DateTime.now()
-//         ),
-//       );
-//     });
-//   }
-//   Future<void> _showReplyDialog(int commentId) async {
-//     String replyText = "";
-//     await showDialog(
-//       context: context,
-//       builder: (context) {
-//         return AlertDialog(
-//           title: Text("Reply to comment"),
-//           content: TextField(
-//             onChanged: (value){
-//               replyText = value;
-//             },
-//             decoration: InputDecoration(hintText: "Enter your reply"),
-//           ),
-//           actions:[
-//             TextButton(
-//               onPressed: () {
-//                 Navigator.of(context).pop();
-//                 _addReply(commentId, replyText);
-//               },
-//               child: Text('Reply'),
-//             )
-//           ],
-//         );
-//       },
-//
-//     );
-//   }
-//
-//
-//   @override
-//   Widget build(BuildContext context){
-//     return Scaffold(
-//       appBar: AppBar(
-//         centerTitle: true,
-//         title:Text(
-//           "Comments",
-//           style: TextStyle(fontSize: 18,),
-//         ),
-//       ),
-//       body:ListView.builder(
-//         itemCount: widget.post.comments.length,
-//         itemBuilder:(context,index){
-//           final comment = widget.post.comments[index];
-//           return CommentTile(
-//               comment: comment,
-//               toggleLike: _toggleLike,
-//               addReply: _showReplyDialog
-//           );
-//         },
-//       ),
-//
-//     );
-//
-//
-//   }
-// }
-//
-// class CommentTile extends StatelessWidget{
-//   final Comments comment;
-//   final Function(int, Comments) toggleLike;
-//   final Function(int) addReply;
-//
-//
-//   const CommentTile({
-//     Key? key,
-//     required this.comment,
-//     required this.toggleLike,
-//     required this.addReply,
-//   }) : super(key:key);
-//
-//   @override
-//   Widget build(BuildContext context){
-//     return Padding(
-//       padding: const EdgeInsets.all(8.0),
-//       child:  Column(
-//         crossAxisAlignment: CrossAxisAlignment.start,
-//         children: [
-//           ListTile(
-//               leading: CircleAvatar(
-//                 backgroundImage: AssetImage(comment.commentImage!),
-//               ),
-//               title: Text(
-//                 comment.user,
-//                 style: TextStyle(fontWeight: FontWeight.bold),
-//               ),
-//               subtitle: Column(
-//                 crossAxisAlignment: CrossAxisAlignment.start,
-//                 children: [
-//                   Text(comment.commentText),
-//                   if (comment.commentImage != null)
-//                     Padding(
-//                       padding: const EdgeInsets.only(top:8.0),
-//                       child: Image.asset(comment.commentImage!),
-//                     ),
-//                 ],
-//               ),
-//               trailing: Row(
-//                 mainAxisSize: MainAxisSize.min,
-//                 children: [
-//                   IconButton(
-//                     icon: Icon(
-//                       comment.isLiked ? Icons.favorite : Icons.favorite_border,
-//                       color: comment.isLiked ? Colors.red : Colors.black,
-//                     ),
-//                     onPressed: (){
-//                       toggleLike(comment.commentId, comment);
-//                     },
-//                   ),
-//                   IconButton(
-//                     icon: Icon(Icons.reply),
-//                     onPressed: (){
-//                       addReply(comment.commentId);
-//                     },
-//                   ),
-//                 ],
-//               )
-//           ),
-//           if (comment.replies.isNotEmpty)
-//             Padding(
-//               padding: const EdgeInsets.only(left: 40.0),
-//               child: Column(
-//                 children: comment.replies.map((reply) {
-//                   return CommentTile(
-//                       comment: reply ,
-//                       toggleLike: toggleLike,
-//                       addReply: addReply
-//                   );
-//                 }).toList(),
-//               ),
-//             )
-//         ],
-//       ),
-//     );
-//   }
-// }
+import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:hive/hive.dart';
+import 'package:http/http.dart';
+import 'package:ismatov/forms/commnetInput.dart';
+import 'package:ismatov/models/post.dart';
+import 'package:ismatov/models/comments.dart';
+import 'package:ismatov/models/post.dart';
+import 'package:ismatov/models/userProfile.dart';
+import 'package:ismatov/api/api_service.dart';
+
+
+class CommentsPage extends StatefulWidget {
+  final String token;
+  final int postId;
+
+  const CommentsPage({required this.token, required this.postId});
+
+  @override
+  _CommentsPageState createState() => _CommentsPageState();
+}
+
+class _CommentsPageState extends State<CommentsPage>{
+  late Future<List<Comment>> _commentsFuture;
+  bool isExpanded = false;
+
+  // void toggleLikeComment() async {
+  //   final response = await ApiService.toggleLikeComment(widget.token, widget.comment.id);
+  //   if (response.success) {
+  //     setState(() {
+  //       comment.isLiked = response.data['liked'];
+  //       comment.likes = response.data['like_count'];
+  //     });
+  //   }
+  // }
+  @override
+  void initState(){
+    super.initState();
+    _loadComments();
+  }
+void _showReplyDialog(Comment parentComment){
+    final TextEditingController _replyController = TextEditingController();
+    showDialog(
+        context: context,
+        builder: (context){
+          return AlertDialog(
+            title: Text("Reply to ${parentComment.ownerUserName}"),
+            content:  TextField(
+              controller: _replyController,
+              decoration: InputDecoration(hintText: "Write your comment"),
+            ),
+            actions: [
+              TextButton(
+                  child: Text('concel'),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+              TextButton(
+                  child:Text("Reply"),
+                onPressed: () async {
+                    if (_replyController.text.trim().isNotEmpty){
+                      bool success = await ApiService.postReply(
+                        widget.token,
+                        parentComment.id,
+                        _replyController.text.trim(),
+                      );
+                      if (success){
+                        Navigator.of(context).pop();
+                        _loadComments();
+                      }
+                    }
+                },
+              )
+            ],
+          );
+        });
+}
+
+String formatImageUrl(String? imagePath){
+        if (imagePath == null || imagePath.isEmpty){
+          return "";
+        }
+        if (imagePath.startsWith("/media/")){
+          return "${ApiService.baseImage}" + imagePath;
+        }
+        return imagePath;
+      }
+
+  void _loadComments() {
+    setState(() {
+      _commentsFuture =  ApiService.fetchComments(widget.token, widget.postId);
+    });
+  }
+
+
+  @override
+  Widget build(BuildContext context) {
+
+    return Scaffold(
+      appBar: AppBar(title: Text("Comments")
+      ),
+
+      body: Column(
+        children: [
+          Expanded(
+              child: FutureBuilder<List<Comment>>(
+                  future: _commentsFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return Center(child: CircularProgressIndicator());
+                    } else if (snapshot.hasError) {
+                      print("Error details: ${snapshot.error} ");
+                      return Center(
+                        child: Text("Error ${snapshot.error.toString()}"),
+                      );
+                    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return Center(child: Text("No comments availble"));
+                    } else {
+                      final comments = snapshot.data!;
+                      return ListView.builder(
+                          itemCount: comments.length,
+                          itemBuilder: (context, index) {
+                            final comment = comments[index];
+                            return Padding(
+                              padding: EdgeInsets.all(16.0),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  CircleAvatar(
+                                    backgroundImage: NetworkImage(
+                                      formatImageUrl(comment.ownerProfileImage),
+                                    ),
+                                  ),
+                                  SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment
+                                          .start,
+                                      children: [
+                                        Text(comment.ownerUserName.toString()),
+                                        Text(
+                                          comment.comment!,
+                                          maxLines: isExpanded ? null : 5,
+                                          overflow: isExpanded
+                                          ? TextOverflow.visible
+                                          : TextOverflow.ellipsis,
+                                          // overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(fontSize: 15),
+                                        ),
+                                        GestureDetector(
+                                          onTap: (){
+                                            setState(() {
+                                              isExpanded = !isExpanded;
+                                            });
+                                          },
+                                          child: Text(
+                                            isExpanded
+                                            ? "show less"
+                                                : "continue reading",
+                                            style: TextStyle(color: Colors.blue),
+                                          ),
+                                        ),
+                                        Row(
+                                          children: [
+                                          IconButton(
+                                              icon: Icon(
+                                                  Icons.thumb_up,
+                                              color: comment.isLiked ? Colors.blue: Colors.grey
+                                              ),
+
+                                            onPressed: () async {
+
+                                              try {
+                                                final response = await ApiService.likeComment(widget.token, comment.id);
+                                                if (response != null) {
+                                                  setState(() {
+                                                    comment.isLiked = response['is_liked'];
+                                                    comment.likes = response['like_count'];
+                                                  });
+
+                                                }
+                                              } catch (e) {
+                                                print('error like comment $e');
+                                              }
+
+                                            }
+                                              // onPressed: () async {
+                                              //     bool success = await ApiService.likeComment(
+                                              //       widget.token, comment.id
+                                              //     );
+                                              //     if (success) {
+                                              //       setState(() {
+                                              //
+                                              //         comment.isLiked = !comment.isLiked;
+                                              //         comment.likes += comment.isLiked ? 1 : -1;
+                                              //       });
+                                              //     }
+                                              // },
+                                            ),
+                                            Text('${comment.likes} likes'),
+                                            SizedBox(width: 10),
+                                            TextButton(
+                                                child: Text('Reply'),
+                                              onPressed: (){
+                                                  _showReplyDialog(comment);
+                                              },
+                                            )
+
+                                          ],
+                                        )
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                      );
+                    }
+                  }),
+          ),
+          Padding(
+              padding: EdgeInsets.all(8.0),
+            child: CommentInputField(
+                token: widget.token,
+                postId: widget.postId,
+              onCommentAdded: _loadComments
+            ),
+          )
+        ],
+      ),
+
+    );
+  }
+
+    }
+
+
+

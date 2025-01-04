@@ -1,17 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:http/http.dart';
+import 'package:ismatov/main.dart';
+import 'package:ismatov/widgets/comments_widget.dart';
 import 'package:ismatov/widgets/profile.dart';
 import 'package:ismatov/models/userProfile.dart';
+import 'package:ismatov/models/likes.dart';
 import 'package:ismatov/widgets/home.dart';
+import 'package:hive/hive.dart';
 import 'package:ismatov/models/post.dart';
+import 'package:ismatov/api/api_service.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+
 
 class PostPage extends StatefulWidget {
   final UserProfile  userProfile;
+  final Post post;
+  // final List<Post> posts;
   final int initialIndex;
+  final String token;
+
   const PostPage({
     Key? key,
     required this.userProfile,
+    required this.post,
     required this.initialIndex,
+    required this.token,
   }) : super(key: key);
 
   @override
@@ -19,24 +33,66 @@ class PostPage extends StatefulWidget {
 }
 
 class _PostPageState extends State<PostPage> {
+  late PageController _pageController;
   bool isExpanded = false;
+  String? token;
 
-  void _toggleLike(int id) {
-    setState(() {
-      var post = widget.userProfile.posts.firstWhere((p) => p.id == id);
-      post.isLiked = !post.isLiked;
+  @override
+  void initState(){
+    super.initState();
+    _pageController = PageController(initialPage: widget.initialIndex);
+    ApiService().getUserToken().then((value){
+      setState(() {
+        token = value;
+      });
+
     });
   }
 
-  void _toggleSave(int id) {
+
+  void handleLike(Post post, String token) async {
+    final bool previousLiked = post.liked;
+    final int? previousLikeId = post.likeId;
+
     setState(() {
-      var post = widget.userProfile.posts.firstWhere((p) => p.id == id);
-      post.save = !post.save;
-    });
+      post.liked = !post.liked;
+      post.likeCount += post.liked ? 1  : -1;
+    }
+    );
+    try{
+     final response = await ApiService().toggleLike(
+        postId: post.id,
+        isLiked: post.liked,
+        token: token,
+      );
+     setState(() {
+       post.likeId = response.likeId;
+     });
+      // post.likeId = response.likeId;
+    } catch(e) {
+      print('Error toggling like :$e');
+     setState(() {
+       post.liked  = previousLiked;
+      post.likeCount += post.liked ? 1: -1;
+      post.likeId  = previousLikeId;
+     });
+      if (e.toString().contains('No Like matches the given query')){
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text("No Like found for this post.")
+            ),
+        );
+      }
+    }
   }
+
+
 
   @override
   Widget build(BuildContext context) {
+    if (token == null ){
+      return Center(child: CircularProgressIndicator());
+    }
     return Scaffold(
         appBar: AppBar(
           title: Row(
@@ -51,12 +107,12 @@ class _PostPageState extends State<PostPage> {
         ),
 
         body:PageView.builder(
+          controller: PageController(initialPage: widget.initialIndex),
             physics: BouncingScrollPhysics(),
             scrollDirection: Axis.vertical,
             itemCount: widget.userProfile.posts.length,
             itemBuilder:(context,index) {
               Post post = widget.userProfile.posts[index];
-
               return SingleChildScrollView(
                 scrollDirection: Axis.vertical,
                 child: Column(
@@ -64,49 +120,49 @@ class _PostPageState extends State<PostPage> {
                       Column(
                         children: [
                           Container(
-                            height: 510,
-                            width: 400,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              border: Border.all(color: Colors.greenAccent),
-                              image: post.postImage != null
-                                  ?DecorationImage(
-                                image: AssetImage(post.postImage!),
-                                fit: BoxFit.cover,
-                              ) :null,
+                    height: 410.h,
+                    width: 400.w,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border.all(color: Colors.red),
+                    image: DecorationImage(
+                        image: post.postImage != null &&
+                        post.postImage!.isNotEmpty
+                            ? NetworkImage(post.postImage!)
+                            : AssetImage('assets/images/nouser.png')as ImageProvider,
+                      fit: BoxFit.cover
+                    ),
+                    ),
+
+
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                            Container(
+                              height: 50.h,
+                              width: 50.w,
+                              decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  // borderRadius: BorderRadius.circular(80),
+                                  image: DecorationImage(
+                                    image: widget.userProfile.profileImage != null && widget.userProfile.profileImage!.isNotEmpty
+                                        ? NetworkImage(widget.userProfile.profileImage!)
+                                        : AssetImage('assets/images/nouser.png') as ImageProvider,
+                                    fit: BoxFit.cover,
+                                  )
+                              ),
+
                             ),
 
-                            child: Align(
-                              alignment: Alignment.topLeft,
-                              child: Stack(
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.only(
-                                      left: 80,
-                                      top: 20,
-                                    ),
-                                    child: Text(
-                                      post.owner.toString(),
-                                      style: TextStyle(color: Colors.white),
-                                    ),
-                                  ),
-                                  // Container(
-                                  //   margin: EdgeInsets.all(20),
-                                  //   width: 50,
-                                  //   height: 50,
-                                  //   decoration: BoxDecoration(
-                                  //     shape: BoxShape.circle,
-                                  //     border: Border.all(color: Colors.white, width: 2),
-                                  //     image: DecorationImage(
-                                  //       image: AssetImage(post.profileImage),
-                                  //       fit: BoxFit.cover,
-                                  //     ),
-                                  //   ),
-                                  // ),
-                                ],
-                              ),
+                            Transform.translate(
+                                offset: Offset(60.w,-50.h),
+                            child: Text(widget.userProfile.userName),
                             ),
+
+                  ]
                           ),
+                          ),
+
                           Padding(
                             padding: const EdgeInsets.only(
                               right: 180,
@@ -116,16 +172,10 @@ class _PostPageState extends State<PostPage> {
                               children: [
                                 IconButton(
                                   icon: Icon(
-                                    post.isLiked
-                                        ? Icons.favorite
-                                        : Icons.favorite_outline_sharp,
-                                    size: 35,
-                                    color: post.isLiked ? Colors.red : Colors
-                                        .black,
-                                  ),
-                                  onPressed: () {
-                                    _toggleLike(post.id);
-                                  },
+                                post.liked ? Icons.favorite : Icons.favorite_border,
+                              color: post.liked ? Colors.red : Colors.grey,
+                            ),
+                                  onPressed: ()  => handleLike(widget.post,widget.token!),
                                 ),
                                 IconButton(
                                   icon: SvgPicture.asset(
@@ -133,7 +183,15 @@ class _PostPageState extends State<PostPage> {
                                     height: 35,
                                     width: 35,
                                   ),
-                                  onPressed: () {},
+                                  onPressed: () {
+                                    Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                            // builder: (context) => CommentsPage(postId: post.id,token: token!
+                                            builder: (context) => CommentsPage(postId: post.id, token: token!,)
+                                            )
+                                        );
+                                  },
                                 ),
                                 IconButton(
                                   icon: SvgPicture.asset(
@@ -146,20 +204,20 @@ class _PostPageState extends State<PostPage> {
                               ],
                             ),
                           ),
-                          Transform.translate(
-                            offset: Offset(160, -50),
-                            child: IconButton(
-                              icon: Icon(
-                                post.save
-                                    ? Icons.bookmarks_rounded
-                                    : Icons.bookmarks_outlined,
-                                size: 35,
-                              ),
-                              onPressed: () {
-                                _toggleSave(post.id);
-                              },
-                            ),
-                          ),
+                          // Transform.translate(
+                          //   offset: Offset(160, -50),
+                          //   child: IconButton(
+                          //     icon: Icon(
+                          //       post.save
+                          //           ? Icons.bookmarks_rounded
+                          //           : Icons.bookmarks_outlined,
+                          //       size: 35,
+                          //     ),
+                          //     onPressed: () {
+                          //       _toggleSave(post.id);
+                          //     },
+                          //   ),
+                          // ),
                           Padding(
                             padding: const EdgeInsets.only(
                               left: 20,
@@ -168,11 +226,11 @@ class _PostPageState extends State<PostPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Transform.translate(
-                                  offset: Offset(0, -40),
+                                  offset: Offset(0.h, -10.w),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(post.owner.toString()),
+                                      // Text(post.owner.toString()),
                                       Text(
                                         post.content,
                                         maxLines: isExpanded ? null : 2,
