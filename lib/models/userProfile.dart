@@ -3,20 +3,20 @@ import 'package:ismatov/models/post.dart';
 class UserProfile {
   final int id;
   final String userName;
-  final String gender;
+  final String? gender;
   final String? profileImage;
   final String? phone;
   final String? dob;
-  final List<Post> posts;
+  List<Post> posts;
 
   UserProfile({
     required this.id,
     required this.userName, 
-    required this.gender,
+    this.gender,
     this.profileImage,
     this.phone,
     this.dob,
-    List<Post>?  posts,
+    List<Post>? posts,
 
 }): posts = posts ?? [];
 

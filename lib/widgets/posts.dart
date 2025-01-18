@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:http/http.dart';
+import 'package:ismatov/forms/createPost.dart';
 import 'package:ismatov/main.dart';
 import 'package:ismatov/widgets/comments_widget.dart';
 import 'package:ismatov/widgets/profile.dart';
+import 'package:ismatov/forms/updatePost.dart';
 import 'package:ismatov/models/userProfile.dart';
 import 'package:ismatov/models/likes.dart';
-import 'package:ismatov/widgets/home.dart';
-import 'package:hive/hive.dart';
 import 'package:ismatov/models/post.dart';
 import 'package:ismatov/api/api_service.dart';
+import 'package:ismatov/api/post_service.dart';
+import 'package:ismatov/api/user_service.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+
 
 
 class PostPage extends StatefulWidget {
   final UserProfile  userProfile;
   final Post post;
-  // final List<Post> posts;
   final int initialIndex;
   final String token;
 
@@ -32,6 +34,8 @@ class PostPage extends StatefulWidget {
   _PostPageState createState() => _PostPageState();
 }
 
+
+
 class _PostPageState extends State<PostPage> {
   late PageController _pageController;
   bool isExpanded = false;
@@ -41,50 +45,92 @@ class _PostPageState extends State<PostPage> {
   void initState(){
     super.initState();
     _pageController = PageController(initialPage: widget.initialIndex);
-    ApiService().getUserToken().then((value){
+    UserService().getUserToken().then((value){
       setState(() {
         token = value;
       });
+    if (token != null){
+      PostService().fetchPosts(token!);
+    }
 
     });
   }
+  void dispose(){
+    _pageController.dispose();
+    super.dispose();
+  }
 
 
-  void handleLike(Post post, String token) async {
-    final bool previousLiked = post.liked;
-    final int? previousLikeId = post.likeId;
 
-    setState(() {
-      post.liked = !post.liked;
-      post.likeCount += post.liked ? 1  : -1;
-    }
-    );
+  Future<void> deletePostHandler(int postId) async {
     try{
-     final response = await ApiService().toggleLike(
-        postId: post.id,
-        isLiked: post.liked,
-        token: token,
+      String? token = await ApiService().getUserToken();
+      await PostService().deletePost(postId: postId, token: token!);
+      setState(() {
+        widget.userProfile.posts.removeWhere((post) => post.id == postId);
+      });
+      // deletePostLocally(postId);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Post movfaqiyatli ochirildi')),
       );
-     setState(() {
-       post.likeId = response.likeId;
-     });
-      // post.likeId = response.likeId;
-    } catch(e) {
-      print('Error toggling like :$e');
-     setState(() {
-       post.liked  = previousLiked;
-      post.likeCount += post.liked ? 1: -1;
-      post.likeId  = previousLikeId;
-     });
-      if (e.toString().contains('No Like matches the given query')){
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text("No Like found for this post.")
-            ),
-        );
-      }
+      Navigator.pop(context,postId);
+    }catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Postni o`chirishda xatolik')),
+      );
     }
   }
+
+
+
+
+
+void deletePostLocally(int postId){
+    setState(() {
+      widget.userProfile.posts.removeWhere((post) => post.id == postId);
+    });
+}
+
+
+
+
+
+
+  // void handleLike(Post post, String token) async {
+  //   final bool previousLiked = post.liked;
+  //   final int? previousLikeId = post.likeId;
+  //
+  //   setState(() {
+  //     post.liked = !post.liked;
+  //     post.likeCount += post.liked ? 1  : -1;
+  //   }
+  //   );
+  //   try{
+  //    final response = await PostService().toggleLike(
+  //       postId: post.id,
+  //       isLiked: post.liked,
+  //       token: token,
+  //     );
+  //    setState(() {
+  //      post.likeId = response.likeId;
+  //    });
+  //     // post.likeId = response.likeId;
+  //   } catch(e) {
+  //     print('Error toggling like :$e');
+  //    setState(() {
+  //      post.liked  = previousLiked;
+  //     post.likeCount += post.liked ? 1: -1;
+  //     post.likeId  = previousLikeId;
+  //    });
+  //     if (e.toString().contains('No Like matches the given query')){
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //           SnackBar(
+  //               content: Text("No Like found for this post.")
+  //           ),
+  //       );
+  //     }
+  //   }
+  // }
 
 
 
@@ -118,49 +164,108 @@ class _PostPageState extends State<PostPage> {
                 child: Column(
                     children: [
                       Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          Row(
+                            // crossAxisAlignment: CrossAxisAlignment.,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                          Container(
+                            height: 40.h,
+                            width: 40.w,
+                            decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                image: DecorationImage(
+                                  image: widget.userProfile.profileImage != null && widget.userProfile.profileImage!.isNotEmpty
+                                      ? NetworkImage(widget.userProfile.profileImage!)
+                                      : AssetImage('assets/images/nouser.png') as ImageProvider,
+                                  fit: BoxFit.cover,
+                                )
+
+                            ),
+                            child:Transform.translate(
+                              offset: Offset(60.w,00.h),
+                              child: Text(widget.userProfile.userName),
+                            ),
+
+
+                          ),
+
+
+                              IconButton(
+                                icon: Icon(Icons.more_vert),
+                                onPressed: () async {
+                                  final selectedPost = widget.userProfile.posts[index];
+                                  final action = await showMenu<String>(
+                                      context: context,
+                                      position: RelativeRect.fromLTRB(100, 100, 100, 100),
+                                      items: [
+                                        PopupMenuItem<String>(
+                                          value: 'edit',
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.edit),
+                                                SizedBox(width:8),
+                                                Text('Edit')
+                                              ],
+                                            )
+                                  ),
+                                        PopupMenuItem(
+                                            value: 'delete',
+                                            child: Row(
+                                              children: [
+                                              Icon(Icons.delete),
+                                                SizedBox(width: 8),
+                                                Text('Delete')
+
+                                            ]
+                                            )
+                                        )
+                                      ]
+                                  );
+                                  if (action == 'edit'){
+                                  final updatedPost = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                  builder: (context) => EditPostPage(post: selectedPost),
+
+                                  ),
+                                  );
+                                  if (updatedPost != null){
+                                  setState(() {
+                                  widget.userProfile.posts[index] = updatedPost;
+                                  });
+                                  }
+                                  } else if (action == "delete") {
+                                    deletePostHandler(selectedPost.id);
+                                  }
+
+
+                                },
+
+                              ),
+
+
+
+                            ],
+                          ),
+
                           Container(
                     height: 410.h,
-                    width: 400.w,
+                    width: double.infinity.w,
                     decoration: BoxDecoration(
                       color: Colors.white,
                       border: Border.all(color: Colors.red),
                     image: DecorationImage(
                         image: post.postImage != null &&
                         post.postImage!.isNotEmpty
-                            ? NetworkImage(post.postImage!)
+                            ? NetworkImage(ApiService().formatImageUrl(post.postImage!))
                             : AssetImage('assets/images/nouser.png')as ImageProvider,
                       fit: BoxFit.cover
                     ),
                     ),
 
 
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                            Container(
-                              height: 50.h,
-                              width: 50.w,
-                              decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  // borderRadius: BorderRadius.circular(80),
-                                  image: DecorationImage(
-                                    image: widget.userProfile.profileImage != null && widget.userProfile.profileImage!.isNotEmpty
-                                        ? NetworkImage(widget.userProfile.profileImage!)
-                                        : AssetImage('assets/images/nouser.png') as ImageProvider,
-                                    fit: BoxFit.cover,
-                                  )
-                              ),
-
-                            ),
-
-                            Transform.translate(
-                                offset: Offset(60.w,-50.h),
-                            child: Text(widget.userProfile.userName),
-                            ),
-
-                  ]
-                          ),
                           ),
 
                           Padding(
@@ -170,13 +275,13 @@ class _PostPageState extends State<PostPage> {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                IconButton(
-                                  icon: Icon(
-                                post.liked ? Icons.favorite : Icons.favorite_border,
-                              color: post.liked ? Colors.red : Colors.grey,
-                            ),
-                                  onPressed: ()  => handleLike(widget.post,widget.token!),
-                                ),
+                            //     IconButton(
+                            //       icon: Icon(
+                            //     post.liked ? Icons.favorite : Icons.favorite_border,
+                            //   color: post.liked ? Colors.red : Colors.grey,
+                            // ),
+                            //       onPressed: ()  => handleLike(widget.post,widget.token!),
+                            //     ),
                                 IconButton(
                                   icon: SvgPicture.asset(
                                     'assets/svgs/comment.svg',
@@ -187,7 +292,6 @@ class _PostPageState extends State<PostPage> {
                                     Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                            // builder: (context) => CommentsPage(postId: post.id,token: token!
                                             builder: (context) => CommentsPage(postId: post.id, token: token!,)
                                             )
                                         );
@@ -204,20 +308,7 @@ class _PostPageState extends State<PostPage> {
                               ],
                             ),
                           ),
-                          // Transform.translate(
-                          //   offset: Offset(160, -50),
-                          //   child: IconButton(
-                          //     icon: Icon(
-                          //       post.save
-                          //           ? Icons.bookmarks_rounded
-                          //           : Icons.bookmarks_outlined,
-                          //       size: 35,
-                          //     ),
-                          //     onPressed: () {
-                          //       _toggleSave(post.id);
-                          //     },
-                          //   ),
-                          // ),
+
                           Padding(
                             padding: const EdgeInsets.only(
                               left: 20,

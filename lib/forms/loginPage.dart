@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import "package:ismatov/forms/registerForm.dart";
 import 'package:ismatov/models/userProfile.dart';
 import 'package:ismatov/main.dart';
+import 'package:ismatov/api/user_service.dart';
 import 'package:ismatov/widgets/home.dart';
 import 'package:ismatov/widgets/profile.dart';
 
@@ -19,13 +20,14 @@ class _LoginPageState extends State<LoginPage>{
   String _password = '';
   bool _isPasswordVisible = false;
   final TextEditingController _passwordController = TextEditingController();
-  final ApiService apiService  = ApiService();
+  // final ApiService apiService  = ApiService();
+  final UserService userService = UserService();
 
   Future<void> _login() async {
     if (_formKey.currentState!.validate()){
       _formKey.currentState!.save();
       try{
-        UserProfile userProfile = await apiService.loginUser(_username, _password);
+        UserProfile userProfile = await userService.loginUser(_username, _password);
         print('Login successful');
         Navigator.pushReplacement(
             context,

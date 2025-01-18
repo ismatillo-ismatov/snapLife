@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:ismatov/api/api_service.dart';
 import 'package:ismatov/forms/loginPage.dart';
+import 'package:ismatov/api/user_service.dart';
 
 
 class RegisterForm extends StatefulWidget {
@@ -26,8 +27,9 @@ class _RegisterFormState extends State<RegisterForm>{
   void _submitForm() async {
     if(_formKey.currentState!.validate()){
       _formKey.currentState!.save();
-      ApiService apiService = ApiService();
-      bool success = await apiService.registerUser(
+      UserService userService = UserService();
+      // ApiService apiService = ApiService();
+      bool success = await userService.registerUser(
         _username,
         _email,
         _passwordController1.text,

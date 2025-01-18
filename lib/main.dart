@@ -4,12 +4,15 @@ import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:ismatov/api/api_service.dart';
+import 'package:ismatov/api/user_service.dart';
 import 'package:ismatov/widgets/home.dart';
 import 'package:ismatov/widgets/profile.dart';
 import 'package:ismatov/widgets/search.dart'as search;
 import 'package:ismatov/widgets/posts.dart';
+import 'package:ismatov/forms/createPost.dart';
 import 'package:ismatov/models/post.dart';
 import 'package:ismatov/models/userProfile.dart';
+import 'package:ismatov/widgets/search.dart';
 import 'package:ismatov/forms/loginPage.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -91,7 +94,7 @@ class _MainAppState extends State<MainApp> {
     String? token = await ApiService().getUserToken();
     if(token != null){
       try{
-        UserProfile profile = await ApiService().fetchUserProfile(token);
+        UserProfile profile = await UserService().fetchUserProfile(token);
         setState(() {
           userProfile = profile;
         });
@@ -108,20 +111,42 @@ class _MainAppState extends State<MainApp> {
   List<Widget> _pages(UserProfile userProfile) {
     return [
       // HomePage(),
-      // search.SearchBarApp(),
       const Center(child: Text("hello")),
-      const Center(child: Text("hello")),
-      const Center(child: Text("hello")),
+      SearchPage(userProfile: userProfile),
+      CreatePostPage(),
       const Center(child: Text("hello")),
       ProfilePage(userProfile: userProfile ),
     ];
   }
+  void _onItemsTapped(int index) async {
+    if (index == 2) {
+      final newPost = await Navigator.push(
+          context,
+      MaterialPageRoute(
+        builder: (context) => CreatePostPage(),
 
-  void _onItemsTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+      ),
+      );
+      if (newPost != null) {
+        setState(() {
+          userProfile?.posts.add(newPost);
+        });
+      }
+    } else {
+      setState(() {
+        _selectedIndex = index;
+      });
+    }
+    // setState(() {
+    //   _selectedIndex = index;
+    // });
   }
+
+  // void _onItemsTapped(int index) {
+  //   setState(() {
+  //     _selectedIndex = index;
+  //   });
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -292,9 +317,7 @@ class _MainAppState extends State<MainApp> {
             ? _pages(userProfile!)[_selectedIndex]
             : Center(child: Text('notorgi index'),)
 
-        // body: userProfile == null
-        //   ? Center(child: CircularProgressIndicator())
-        //   : _pages(userProfile!)[_selectedIndex],
+
         ),
         bottomNavigationBar: BottomNavigationBar(
           unselectedIconTheme: const IconThemeData(

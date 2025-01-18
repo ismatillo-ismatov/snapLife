@@ -8,6 +8,7 @@ import 'package:ismatov/models/comments.dart';
 import 'package:ismatov/models/post.dart';
 import 'package:ismatov/models/userProfile.dart';
 import 'package:ismatov/api/api_service.dart';
+import 'package:ismatov/api/comment_service.dart';
 
 
 class CommentsPage extends StatefulWidget {
@@ -58,7 +59,7 @@ void _showReplyDialog(Comment parentComment){
                   child:Text("Reply"),
                 onPressed: () async {
                     if (_replyController.text.trim().isNotEmpty){
-                      bool success = await ApiService.postReply(
+                      bool success = await CommentService.postReply(
                         widget.token,
                         parentComment.id,
                         _replyController.text.trim(),
@@ -87,7 +88,7 @@ String formatImageUrl(String? imagePath){
 
   void _loadComments() {
     setState(() {
-      _commentsFuture =  ApiService.fetchComments(widget.token, widget.postId);
+      _commentsFuture =  CommentService.fetchComments(widget.token, widget.postId);
     });
   }
 
@@ -127,7 +128,7 @@ String formatImageUrl(String? imagePath){
                                 children: [
                                   CircleAvatar(
                                     backgroundImage: NetworkImage(
-                                      formatImageUrl(comment.ownerProfileImage),
+                                 formatImageUrl(comment.ownerProfileImage),
                                     ),
                                   ),
                                   SizedBox(width: 10),
@@ -170,7 +171,7 @@ String formatImageUrl(String? imagePath){
                                             onPressed: () async {
 
                                               try {
-                                                final response = await ApiService.likeComment(widget.token, comment.id);
+                                                final response = await CommentService.likeComment(widget.token, comment.id);
                                                 if (response != null) {
                                                   setState(() {
                                                     comment.isLiked = response['is_liked'];
@@ -183,18 +184,6 @@ String formatImageUrl(String? imagePath){
                                               }
 
                                             }
-                                              // onPressed: () async {
-                                              //     bool success = await ApiService.likeComment(
-                                              //       widget.token, comment.id
-                                              //     );
-                                              //     if (success) {
-                                              //       setState(() {
-                                              //
-                                              //         comment.isLiked = !comment.isLiked;
-                                              //         comment.likes += comment.isLiked ? 1 : -1;
-                                              //       });
-                                              //     }
-                                              // },
                                             ),
                                             Text('${comment.likes} likes'),
                                             SizedBox(width: 10),

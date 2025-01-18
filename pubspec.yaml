@@ -37,8 +37,8 @@ dependencies:
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   flutter_screenutil: ^5.8.4
-#  hive_generator: ^1.1.0
-#  path_provider: ^2.0.12
+  image_picker: ^0.8.7+4
+
 
 
 
