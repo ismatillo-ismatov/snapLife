@@ -4,32 +4,53 @@ import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:ismatov/api/api_service.dart';
+import 'package:ismatov/api/friends_service.dart';
 import 'package:ismatov/api/user_service.dart';
+import 'package:ismatov/widgets/friendsRequestScreen.dart';
+import 'package:ismatov/widgets/friends_request_page.dart';
 import 'package:ismatov/widgets/home.dart';
+import 'package:ismatov/widgets/message_widget.dart';
 import 'package:ismatov/widgets/profile.dart';
 import 'package:ismatov/widgets/search.dart'as search;
 import 'package:ismatov/widgets/posts.dart';
 import 'package:ismatov/forms/createPost.dart';
-import 'package:ismatov/models/post.dart';
 import 'package:ismatov/models/userProfile.dart';
 import 'package:ismatov/widgets/search.dart';
+import 'package:ismatov/widgets/notifications.dart';
 import 'package:ismatov/forms/loginPage.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Hive.deleteBoxFromDisk("authBox");
+    await Hive.deleteBoxFromDisk("userBox");
+    print("Old hive boxes deleted successfully");
+  } catch (e) {
+    print('Error deleting old boxes: $e');
+  }
   await Hive.initFlutter();
+  await Hive.openBox('authBox');
   await Hive.openBox('userBox');
-  var userBox = Hive.box('userbox');
-  bool isLoggedIn = userBox.containsKey('userProfile');
+
+  String? savedToken = Hive.box('authBox').get('auth_token');
+  print("Hive ichidagi userToken: $savedToken");
+  UserService().checkToken();
   runApp(
       ScreenUtilInit(
       designSize: const Size(414,896),
       builder: (context, child) => MyApp(),
       ),
-      );
+  );
+  UserService().checkToken();
+}
+
+void checkHiveData() async {
+  var box = await Hive.openBox('authBox');
+  print("Hive ichida barcha malumotlar: ${box.toMap()}");
 }
 
 class MyApp extends StatelessWidget {
@@ -39,19 +60,24 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'SnapLife',
       theme: ThemeData(
-          scaffoldBackgroundColor: Colors.white, primaryColor: Colors.white10),
+          scaffoldBackgroundColor: Colors.white, primaryColor: Colors.white10
+      ),
       home: AuthHandler(),
     );
   }
 
-
 }
+
 class AuthHandler extends StatelessWidget{
-  Future<bool>_isLoggedIn() async{
-    var userBox = Hive.box('userBox');
-    String? token = userBox.get('userToken');
+  Future<bool> _isLoggedIn() async {
+    var authBox = Hive.box('authBox');
+    print("Hive ichidagi userToken: ${authBox.get('auth_token')}");
+    String? token = authBox.get('auth_token');
     return token != null && token.isNotEmpty;
   }
+
+
+
   @override
   Widget build(BuildContext context){
     return FutureBuilder<bool>(
@@ -81,14 +107,34 @@ class MainApp extends StatefulWidget{
 class _MainAppState extends State<MainApp> {
   int _selectedIndex = 0;
   UserProfile? userProfile;
+  String? token;
 
   @override
   void initState(){
     super.initState();
     _fetchUserProfile();
+    // _setUserOnlineStatus(true);
+    _fetchToken();
   }
 
 
+  // Futere<void> _setUserOnlineStatus(bool isOnline) async {
+  //   if( token != null && token!.isNotEmpty){
+  //     bool success = await FriendsService.updateOnlineStatus(isOnline, token!);
+  //     print("Online status updated: $success");
+  //   } else {
+  //     print('Token topilmadi. online status yangilanmadi');
+  //   }
+  // }
+  Future<void> _fetchToken() async {
+    var authBox = Hive.box('authBox');
+    print("Hive ichidagi userToken: ${authBox.get('userToken')}");
+    String? fetchedToken = authBox.get('auth_token');
+    print("Olingan token: $fetchedToken");
+    setState(() {
+      token = fetchedToken;
+    });
+  }
 
   void _fetchUserProfile() async {
     String? token = await ApiService().getUserToken();
@@ -104,10 +150,7 @@ class _MainAppState extends State<MainApp> {
     }else{
       print('Foydalanuvchi login qilmagan');
     }
-
   }
-
-
   List<Widget> _pages(UserProfile userProfile) {
     return [
       // HomePage(),
@@ -115,6 +158,7 @@ class _MainAppState extends State<MainApp> {
       SearchPage(userProfile: userProfile),
       CreatePostPage(),
       const Center(child: Text("hello")),
+      // VideoScreen(),
       ProfilePage(userProfile: userProfile ),
     ];
   }
@@ -124,7 +168,6 @@ class _MainAppState extends State<MainApp> {
           context,
       MaterialPageRoute(
         builder: (context) => CreatePostPage(),
-
       ),
       );
       if (newPost != null) {
@@ -137,17 +180,7 @@ class _MainAppState extends State<MainApp> {
         _selectedIndex = index;
       });
     }
-    // setState(() {
-    //   _selectedIndex = index;
-    // });
   }
-
-  // void _onItemsTapped(int index) {
-  //   setState(() {
-  //     _selectedIndex = index;
-  //   });
-  // }
-
   @override
   Widget build(BuildContext context) {
 
@@ -169,13 +202,30 @@ class _MainAppState extends State<MainApp> {
                     ),
                   );
                 },
-
-
       ),
             ),
             IconButton(
-              icon: Icon(Icons.favorite_outline_sharp),
-              onPressed: () {},
+                icon: Icon(Icons.favorite_outline_sharp),
+                onPressed:  () async {
+                  var authBox  = await Hive.openBox('authBox');
+                  String? currentToken = authBox.get('auth_token');
+                  if (currentToken != null && currentToken.isNotEmpty) {
+
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            FriendRequestScreen(token: token!),
+                      )
+                  );
+                  } else {
+                    print("Current token is null or Empty");
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Authentication error. Please login again."))
+                    );
+                  }
+
+                }
             ),
             IconButton(
               icon: SvgPicture.asset(
@@ -183,9 +233,12 @@ class _MainAppState extends State<MainApp> {
                 height: 30,
                 width: 30,
               ),
-              onPressed: () {},
+              onPressed: (){
+
+              },
             ),
           ],
+
 
           bottom: PreferredSize(
             preferredSize: Size.fromHeight(80),
@@ -241,42 +294,6 @@ class _MainAppState extends State<MainApp> {
                               ),
                             ],
                           ),
-                        ),
-                        SizedBox(width: 5),
-                        Container(
-                          height: 80,
-                          width: 80,
-                          decoration: BoxDecoration(
-                              color: Color(0xfff6f7f9),
-                              border: Border.all(color: Colors.green),
-                              shape: BoxShape.circle,
-                              image: DecorationImage(
-                                  image:
-                                  AssetImage('assets/images/2.jpg'))),
-                        ),
-                        SizedBox(width: 5),
-                        Container(
-                          height: 80,
-                          width: 80,
-                          decoration: BoxDecoration(
-                              color: Color(0xfff6f7f9),
-                              border: Border.all(color: Colors.green),
-                              shape: BoxShape.circle,
-                              image: DecorationImage(
-                                  image:
-                                  AssetImage('assets/images/3.jpg'))),
-                        ),
-                        SizedBox(width: 5),
-                        Container(
-                          height: 80,
-                          width: 80,
-                          decoration: BoxDecoration(
-                              color: Color(0xfff6f7f9),
-                              border: Border.all(color: Colors.green),
-                              shape: BoxShape.circle,
-                              image: DecorationImage(
-                                  image:
-                                  AssetImage('assets/images/4.jpg'))),
                         ),
                         SizedBox(width: 5),
                         Container(
@@ -339,9 +356,6 @@ class _MainAppState extends State<MainApp> {
           onTap: _onItemsTapped,
         )
     );
-
-
-
 
   }
 }

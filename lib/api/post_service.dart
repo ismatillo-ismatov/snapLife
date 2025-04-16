@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:ismatov/api/api_service.dart';
 import 'package:hive/hive.dart';
 import 'package:http_parser/http_parser.dart';
+import 'package:ismatov/api/example.dart';
 import 'package:mime/mime.dart';
 import 'dart:io';
 import 'package:ismatov/models/post.dart';
@@ -10,6 +11,8 @@ import 'package:ismatov/models/post.dart';
 
 class PostService {
   final ApiService _apiService =  ApiService();
+
+
 
   Future<List<Post>> fetchPosts(String token) async {
     final response = await http.get(
@@ -29,10 +32,24 @@ class PostService {
         final Map<String, dynamic> postMap = post as Map<String, dynamic>;
         print("Before modification: $postMap");
         if (postMap['postImage'] != null && postMap['postImage'].isNotEmpty) {
-          postMap['postImage'] = '${ApiService.baseImage}${postMap['postImage']}';
+          postMap['postImage'] = ApiService().formatImageUrl(postMap['postImage']);
+          // postMap['postImage'] = '${ApiService.baseImage}${postMap['postImage']}';
         } else {
           postMap['postImage'] = null;
         }
+        // if (postMap['postVideo'] != null && !postMap['postVideo'].startsWith('http')) {
+        //   postMap['postVideo'] = '${postMap['postVideo']}';
+        // }
+
+        if (postMap['postVideo'] != null && postMap['postVideo'].isNotEmpty) {
+            // postMap['postVideo'] = '${ApiService.baseImage}${postMap['postVideo']}';
+            postMap['postVideo'] = ApiService().formatVideoUrl(postMap['postVideo']);
+
+        //   postMap['postVideo'] = '${ApiService.baseImage}${postMap['postVideo']}';
+        // } else {
+        //   postMap['postVideo'] = null;
+        }
+
         print("After modification: $postMap");
         return Post.fromJson(postMap);
       }).toList();
@@ -50,6 +67,7 @@ class PostService {
     required String content,
     required String token,
     File? postImage,
+    File? postVideo,
     }) async {
     final uri = Uri.parse('${ApiService.baseUrl}/posts/');
     final request = http.MultipartRequest('POST',uri)
@@ -57,12 +75,19 @@ class PostService {
     ..fields['content'] = content;
 
     if (postImage != null) {
-      // final mimeType = lookupMimeType(postImage.path)!.split('/');
       request.files.add(
           await http.MultipartFile.fromPath(
               'postImage',postImage.path,
               // contentType: MediaType(mimeType[0],mimeType[1]),
           ),
+      );
+    }
+    if (postVideo != null) {
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'postVideo',postVideo.path,
+          // contentType: MediaType(mimeType[0],mimeType[1]),
+        ),
       );
     }
     final streamedResponse = await request.send();

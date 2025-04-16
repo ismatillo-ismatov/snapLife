@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ismatov/models/comments.dart';
+import 'package:ismatov/api/api_service.dart';
 
 
 class Post {
@@ -7,6 +8,7 @@ class Post {
   final String owner;
   final String content;
   final String? postImage;
+  final String? postVideo;
   final DateTime postDate;
   final List<dynamic>comments;
   bool liked;
@@ -22,6 +24,7 @@ class Post {
     required this.owner,
     required this.content,
     this.postImage,
+    this.postVideo,
     required this.postDate,
     this.comments = const [],
     this.liked = false,
@@ -37,6 +40,7 @@ class Post {
       owner: json['owner'],
       content: json['content'],
       postImage: json['postImage'],
+      postVideo: json['postVideo'],
       postDate: DateTime.parse(json['post_date']),
       liked: json['liked']?? false,
       likeCount: json['likeCount'] ?? 0,

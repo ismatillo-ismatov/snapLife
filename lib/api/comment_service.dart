@@ -44,7 +44,7 @@ class CommentService {
     );
     print("response body: ${response.body}");
     if (response.statusCode == 201) {
-      print("Comment is successfuly");
+      print("Comment is successfully");
       return true;
     } else {
       print("Failed to post comment: ${response.body}");

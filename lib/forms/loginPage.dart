@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:http/http.dart' as http ;
 import 'package:ismatov/api/api_service.dart';
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import "package:ismatov/forms/registerForm.dart";
 import 'package:ismatov/models/userProfile.dart';
 import 'package:ismatov/main.dart';
@@ -28,6 +29,9 @@ class _LoginPageState extends State<LoginPage>{
       _formKey.currentState!.save();
       try{
         UserProfile userProfile = await userService.loginUser(_username, _password);
+        var box = Hive.box('authBox');
+        await box.put('user_id', userProfile.id);
+        print("User ID saved: ${userProfile.id}");
         print('Login successful');
         Navigator.pushReplacement(
             context,

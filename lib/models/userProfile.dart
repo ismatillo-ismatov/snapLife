@@ -21,8 +21,16 @@ class UserProfile {
 }): posts = posts ?? [];
 
   factory UserProfile.fromJson(Map<String,dynamic>json){
+    print("Parsed id: ${json['id']}");
+    print("UserProfile JSON: $json");
+    print("Foydalanuvchi JSON ma'lumotlari: $json");
+    if(json['profile_id'] == null || json['profile_id'] == 0) {
+      throw Exception('UserProfile ID notogri yoki yoq');
+    }
+    print(json);
+
     return UserProfile(
-        id: json['id'],
+        id: json['profile_id'] ?? json['id'] ?? 0,
         userName: json['userName'] ,
         gender: json['gender'],
         profileImage: json['profileImage'],
@@ -32,7 +40,14 @@ class UserProfile {
         ? (json ['posts'] as List<dynamic>)
             .map((post) => Post.fromJson(post)).toList()
             : [],
+
     );
+
+  }
+
+  @override
+  String toString() {
+    return 'UserProfile(id:$id, userName:$userName,profileImage:$profileImage,posts:$posts)';
   }
 
 }
