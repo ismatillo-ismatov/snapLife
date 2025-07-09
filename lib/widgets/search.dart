@@ -21,13 +21,6 @@ class _SearchPageState extends State<SearchPage> {
   List<dynamic> _searchResults = [];
   bool _isLoading = false;
 
-
-
-
-
-
-
-
   void _searchUsers() async {
     setState(() {
       _isLoading = true;

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:http/http.dart' as http;
 import 'package:ismatov/api/api_service.dart';
 import 'package:hive/hive.dart';
@@ -58,6 +59,11 @@ class UserService{
         await saveAuthToken(token);
         var verifiedToken = await getAuthToken();
         print("login successfully,  Token verified: ${verifiedToken != null}");
+        final fcmToken = await FirebaseMessaging.instance.getToken();
+        print("📲 Login paytida FCM token: $fcmToken");
+        if (fcmToken != null) {
+          await ApiService().saveFCMToken(fcmToken);
+        }
 
         return await fetchUserProfile(token);
       } else {
@@ -68,16 +74,7 @@ class UserService{
       rethrow;
     }
   }
-  // void checkToken() async {
-  //   var box = await Hive.openBox('authBox');
-  //   String? savedToken = box.get('auth_token');
-  //
-  //   if (savedToken != null ) {
-  //     print("saqlangan Token: $savedToken");
-  //   } else {
-  //     print('token saqlanmagan');
-  //   }
-  // }
+
 
 
   Future<UserProfile> fetchUserProfile(String token) async {
@@ -104,16 +101,12 @@ class UserService{
       return UserProfile(
           id: data['id'],
           userName: data['userName'],
-          // user_id: data['user_id'],
-          profileImage: data['profileImage'] != null
-              ? '${ApiService.baseImage}${data['profileImage']}'
-              : null,
+          profileImage: data['profileImage'],
           gender: data['gender'],
           posts: data['posts'] != null && data['posts'] is List
               ? (data['posts'] as List<dynamic>)
               .map((post) {
             if (post['postImage'] != null && post['postImage'].isNotEmpty) {
-              post['postImage'] = '${ApiService.baseImage}${post['postImage']}';
             }
             return Post.fromJson(post as Map<String, dynamic>);
           }).toList()
@@ -122,6 +115,36 @@ class UserService{
     } else {
       throw Exception("Failed to load user profile");
     }
+  }
+  Future<UserProfile> fetchUserProfileById(int userId, String token) async {
+    final response = await http.get(
+        Uri.parse('${ApiService.baseUrl}/user/$userId'),
+        headers: {
+          'Authorization': 'Token $token',
+        }
+    );
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      List<Post> posts = data['posts'] != null
+          ? (data['posts'] as List<dynamic>).map((post) {
+        if (post['postImage'] != null && post['postImage'].isNotEmpty) {
+        }
+
+        return Post.fromJson(post as Map<String, dynamic>);
+      }).toList()
+          : [];
+      return UserProfile(
+          id: data['id'],
+          userName: data['userName'],
+          profileImage: data['profileImage'],
+              // ? '${ApiService.baseImage}${data['profileImage']}'
+
+          posts: posts
+      );
+    } else {
+      throw Exception("User Topilmadi");
+    }
+
   }
   Future<void>refreshToken() async {
     final apiService = ApiService();
@@ -243,8 +266,5 @@ class UserService{
     // return await _apiService.logout();
   }
 
-  // Future<void> logout() async {
-  //   return await _apiService.logout();
-  // }
 
 }

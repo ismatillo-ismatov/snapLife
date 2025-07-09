@@ -9,122 +9,205 @@ class MessageService {
   WebSocketChannel? _channel;
   final ApiService _apiService = ApiService();
 
-  void connectToWebSocket(int sender, int receiver, Function(Message) onMessageReceived) {
-    _channel  = WebSocketChannel.connect(
-      Uri.parse('ws://192.168.100.8:8000/ws/messages/$sender/$receiver/')
-    );
-    _channel!.stream.listen((data){
-      print("WebSocket orqali keldan data: $data");
-      final Map<String,dynamic> messageData = json.decode(data);
-      final message = Message.fromJson(messageData);
-      print("WebSocket orqali yangi xabar keldi");
-      onMessageReceived(message);
-    });
 
-  }
-
-  Future<void>checkConnection() async {
-    try{
-      final result = await InternetAddress.lookup('google.com');
-      if(result.isNotEmpty && result[0].rawAddress.isNotEmpty){
-        print('internet bor');
-      }
-    } catch(e){
-      print("Internet mavjud emas $e");
+  void connectToWebSocket(int sender, int receiver, Function(Message) onMessageReceived) async {
+    String? token = await _apiService.getUserToken();
+    if (token == null) {
+      print("Token yoq login qiling");
+      return;
     }
-  }
+    final url = Uri.parse("ws://192.168.100.8:8000/ws/messages/?token=$token");
+    _channel =WebSocketChannel.connect(url);
 
-  Future<bool> sendMessage(int sender, int receiver, String message) async {
-  try {
-    final token = await ApiService().getUserToken();
-    final response = await http.post(
-      Uri.parse("${ApiService.baseUrl}/messages/"),
-      headers: {
-        'Authorization': "Token $token",
-        'Content-type': 'application/json'
-      },
-      body: jsonEncode({
-        'sender': sender,
-        'receiver': receiver,
-        'message': message,
-      }),
+    _channel!.stream.listen((data) {
+      print("WebSocket orqali keldi: $data");
+      final decoded = json.decode(data);
+      print("Parsing message JSON: $decoded");
+      if (decoded is Map<String,dynamic>  && decoded.containsKey("id")) {
+        try {
+          final newMessage = Message.fromJson(decoded);
+          onMessageReceived(newMessage);
+
+
+        } catch (e) {
+          print('Xabarni perse qilishda xatolik: $e');
+
+        }
+      } else {
+        print('Oddiy status yoki notorgi fatmatda keldi: $decoded');
+      }
+
+    }, onError: (error) {
+      print("WebSocket xatosi: $error");
+    }, onDone: () {
+      print("WebSocket yopildi");
+
+    }
     );
-    return response.statusCode == 201;
-  } catch (e) {
-    print("Error sending message: $e");
-    return false;
   }
-
-  }
-
-  void disconnect(){
+  void disconnect() {
     _channel?.sink.close();
+    print("WebSocket uzildi");
   }
-  Stream get messages => _channel!.stream;
 
 
-  Future<List<Message>> fetchMessages(int senderId,int receiverId,String token) async {
-    final response = await http.get(
-      // Uri.parse("${ApiService.baseUrl}/messages/"),
-      Uri.parse("${ApiService.baseUrl}/messages/?sender=$senderId&receiver=$receiverId"),
+  Future<bool> sendMessage(
+      int sender,
+      int receiver,
+      String messageText,{
+        String type = 'text',
+        String? file,
+        int? repliedToId,
+      }) async {
+
+    if (_channel != null ) {
+      final message = {
+        "message": messageText,
+        "receiver":receiver,
+        "type":type,
+        if (file != null) "file": file,
+        if (repliedToId != null) "replied_to": repliedToId,
+      };
+      _channel!.sink.add(json.encode(message));
+      print("WebSocket orqali yuborildi $message");
+      return true;
+    } else {
+      print("WebSocket ulanmagan");
+      return false;
+    }
+
+
+  }
+
+  // Future<bool> sendMessage(int sender, int receiver, String messageText,{String type = 'text',String? file,int? replyToId}) async {
+  //   if (_channel != null ) {
+  //     final message = {
+  //       "message": messageText,
+  //       "receiver":receiver,
+  //       "type":type,
+  //       if (file != null) "file": file
+  //     };
+  //     _channel!.sink.add(json.encode(message));
+  //     print("WebSocket orqali yuborildi $message");
+  //     return true;
+  //   } else {
+  //     print("WebSocket ulanmagan");
+  //     return false;
+  //   }
+  //
+  //
+  // }
+
+
+
+  Future<List<Message>> fetchMessages(int sender,int receiver,String token) async {
+    final url = Uri.parse("${ApiService.baseUrl}/messages/get_messages/?sender=$sender&receiver=$receiver");
+
+    final response = await http.get(url,
       headers: {
         'Authorization': "Token $token",
-        'Content-type': 'application/json'
+        // 'Content-type': 'application/json'
       },
     );
     print("response status: ${response.statusCode}");
     print('response body: ${response.body}');
-    if(response.statusCode == 200) {
+    if (response.statusCode == 200 ) {
+      final List<dynamic> data = json.decode(response.body);
+      return data.map((e) => Message.fromJson(e)).toList();
+    } else {
+      throw Exception("Xabarlarni olishda xatolik: ${response.body}");
+    }
+  }
 
-      final Map<String,dynamic>jsonData =  json.decode(response.body);
-      final List<dynamic> results = jsonData['results'];
-      return results.map((data) => Message.fromJson(data)).toList();
-    } else{
-      throw Exception("Failed to load messages");
+  Future<List<Message>> fetchInbox(String token) async {
+    final url = Uri.parse("${ApiService.baseUrl}/messages/inbox/");
+
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'Token $token',
+        'Content-type': 'application/json',
+      }
+    );
+    print("Inbox status: ${response.statusCode}");
+    print("Inbox body: ${response.body}");
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+      return data.map((e) => Message.fromJson(e)).toList();
+    } else {
+      throw Exception("Inbox olishda xatolik");
+    }
+
+
+  }
+  Future<List<Message>> fetchInboxMessage() async {
+    String? token = await _apiService.getUserToken();
+    if (token == null) {
+      throw Exception("Token yoq. login qilinmagan");
+    }
+    return await fetchInbox(token);
+  }
+
+  Future<void> markMessageAsRead({
+    required int senderId,
+    required int receiverId,
+    required String token,
+}) async {
+    final url = Uri.parse('${ApiService.baseUrl}/messages/mark_as_read/');
+    final response = await http.post(url,
+        headers: {
+          'Authorization': 'Token $token',
+          'Content-type': 'application/json'
+        },
+        body: jsonEncode({
+          'sender':senderId,
+          'receiver':receiverId,
+        }),
+    );
+    if (response.statusCode != 200 ) {
+      print("Xatolik ${response.body}");
+      throw Exception("Xabarni oqilgand deb belgilab bolmadi.");
     }
   }
 
 
-  static Future<bool>sendMessageToAPI(int senderId,int receiverId,String messageText,String token) async {
+  // Future<void> markMessageAsRead(int messageId,String token) async {
+  //   final url = Uri.parse('${ApiService.baseUrl}/messages/$messageId/read');
+  //   final response = await http.put(url,
+  //       headers: {
+  //         'Authorization': 'Token $token',
+  //         'Content-type': 'application/json'
+  //       }
+  //   );
+  //   if (response.statusCode == 200 ) {
+  //     print("Xabar oqilgan deb belgilandi");
+  //   } else {
+  //     print("Xatolik: ${response.body}");
+  //   }
+  // }
+  //
+  Future<void> markAllAsRead({
+    required int senderId,
+    required int receiverId,
+    required String token,
+}) async {
+    final url = Uri.parse('${ApiService.baseUrl}/messages/mark_all_as_read');
     final response = await http.post(
-      Uri.parse("${ApiService.baseUrl}/messages/"),
-          headers: {
-        'Authorization':"Token $token",
-        'Content-type': 'application/json'
-    },
-      body: json.encode({
-        'sender': senderId,
-        'receiver': receiverId,
-        'message': messageText,
-        'is_read':false,
+      url,
+      headers: {
+        'Authorization': 'Token $token',
+        'Content-type': 'application/json',
+      },
+      body: jsonEncode({
+        'sender':senderId,
+        'receiver':receiverId,
       })
     );
-    print("Request body: ${json.encode({
-      'sender':senderId,
-      'receiver': receiverId,
-      'message': messageText,
-      'is_read':false,
-    })}");
-    print('response body: ${response.body}');
-
-    if(response.statusCode == 201){
-      print("Message send successfully");
-      return true;
-    } else{
-      print('Failed to send message: ${response.body}');
-      return false;
-    }
-
-    }
-
-    Future<List<dynamic>>getMessages(int senderId, int receiverId) async {
-    final response = await http.get(
-      Uri.parse("${ApiService.baseUrl}/messages/get_messages/sender=$senderId&receiver=$receiverId"),
-    );
     if (response.statusCode == 200) {
-      return json.decode(response.body);
+      print("Barcha xabarlar oqildi");
     } else {
-      throw Exception('Failed to load message');
+      print("Xatolik: ${response.body}");
     }
-    }
+  }
 }

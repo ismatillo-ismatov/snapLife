@@ -29,18 +29,22 @@ class CommentService {
     }
   }
 
-  static Future<bool> postComment(String token, int postId,
-      String commentText) async {
+  static Future<bool> postComment(String token, int postId, String comment,{int? parentId}) async {
+      final Map<String,dynamic> data = {
+        'post':postId,
+        'comment':comment
+      };
+      if (parentId != null) {
+        data['parent'] = parentId;
+      }
     final response = await http.post(
       Uri.parse("${ApiService.baseUrl}/comments/"),
       headers: {
         'Authorization': "Token $token",
         'Content-type': 'application/json'
       },
-      body: json.encode({
-        'post': postId,
-        'comment': commentText,
-      }),
+      body: jsonEncode(data),
+
     );
     print("response body: ${response.body}");
     if (response.statusCode == 201) {
@@ -67,6 +71,7 @@ class CommentService {
     return null;
   }
 }
+
   static Future<bool> postReply(String token, int commentId,
       String reply) async {
     final response = await http.post(
@@ -78,10 +83,7 @@ class CommentService {
         body: json.encode({
           'comment': reply
         })
-      // body: json.encode({
-      //   'parent': commentId,
-      //   'comment': replyText,
-      // }),
+
     );
     return response.statusCode == 201;
   }

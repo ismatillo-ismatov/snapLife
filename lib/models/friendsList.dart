@@ -1,10 +1,12 @@
 import 'package:flutter/cupertino.dart';
 import 'package:ismatov/api/api_service.dart';
+import 'package:ismatov/models/post.dart';
 
 class Friend{
   final int id;
   final String userName;
   final String? profileImage;
+  List<Post> posts;
   final bool isOnline;
   final DateTime? lastActive;
 
@@ -13,11 +15,11 @@ class Friend{
     required this.id,
     required this.userName,
     this.profileImage,
+    List<Post>? posts,
     required this.isOnline,
     this.lastActive,
 
-
-});
+}): posts = posts ?? [];
   factory Friend.fromJson(Map<String,dynamic>json) {
     return Friend(
         id: json['id'] as int? ?? 0 ,
@@ -25,6 +27,10 @@ class Friend{
         profileImage: json['profileImage'] != null
         ? '${ApiService.baseImage}${json['profileImage']}'
             :null,
+      posts: json['posts'] != null
+      ?(json ['posts'] as List<dynamic>)
+      .map((post) => Post.fromJson(post)).toList()
+      : [],
       isOnline: json['is_online'] ?? false,
       lastActive: json['last_activity'] != null
         ? DateTime.parse(json['last_activity'])

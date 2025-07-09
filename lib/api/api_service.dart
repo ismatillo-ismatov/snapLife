@@ -1,17 +1,20 @@
 import 'dart:convert';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:hive_flutter/adapters.dart';
 import 'package:http/http.dart' as http;
 import 'package:hive/hive.dart';
-import 'package:ismatov/models/post.dart';
-import 'package:ismatov/forms/loginPage.dart';
-import 'package:ismatov/models/userProfile.dart';
-import 'package:ismatov/models/comments.dart';
+
 
 class ApiService {
+
+  static Box? _authBox;
+
   static const String baseUrl = 'http://192.168.100.8:8000/api';
   static const String baseImage = 'http://192.168.100.8:8000';
+  final storage = FlutterSecureStorage();
   Future<String?> getUserToken() async {
     var box = await Hive.openBox('authBox');
     String? token = box.get('auth_token');
@@ -19,6 +22,40 @@ class ApiService {
     return token;
   }
 
+  Future<Box> _getBox() async {
+    if (_authBox == null || !_authBox!.isOpen) {
+      _authBox = await Hive.openBox('authBox');
+    }
+    return _authBox!;
+  }
+
+
+
+
+
+  Future<void> saveFCMToken(String token) async {
+    final authToken = await getUserToken();
+    if (authToken == null ) {
+      print("⚠️ Auth token topilmadi - foydalanuvchi hali login qilmagan");
+      return;
+    }
+    final url = Uri.parse('$baseUrl/save_fcm_token/');
+    final response = await http.post(
+      url,
+      headers: {
+        'Authorization': 'Token $authToken',
+        'Content-type': 'application/json',
+      },
+      body: jsonEncode({'fcm_token':token}),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      print('✅ Firebase token serverga yuborildi');
+    } else {
+      print("❌ Token yuborishda xatolik: ${response.body}");
+      throw Exception('Token yuborishda xatolik: ${response.statusCode}');
+    }
+
+  }
 
 
   Future<List<dynamic>> searchUsers(String query,String token) async {
@@ -36,15 +73,23 @@ class ApiService {
 
 
 
+
+
+
+
+
+
   Future<void> saveAuthToken(String token) async {
-    var box = await Hive.openBox('authBox');
+    final box = await _getBox();
+    // var box = await Hive.openBox('authBox');
     await box.put('auth_token', token);
     print('Current authBox contents: ${box.toMap()}');
     print('Token saqlandi: ${box.get("auth_token")}');
   }
 
   Future<String?>getAuthToken() async {
-    var box = await Hive.openBox('authBox');
+    final box = await _getBox();
+    // var box = await Hive.openBox('authBox');
     final token = box.get('auth_token');
     print("Retrieved token: $token");
     return token;
@@ -52,41 +97,28 @@ class ApiService {
 
 
   Future<void>deleteAuthToken() async {
-    var box = await Hive.openBox('authBox');
+    final box = await _getBox();
+    // var box = await Hive.openBox('authBox');
     await box.delete('auth_token');
     print("token deleted");
   }
   Future<void>saveUserId(int userId) async {
-    var box = Hive.box('authBox');
+    final box = await _getBox();
+    // var box = Hive.box('authBox');
     await box.put("user_id",userId);
     print("Stored user_id in Hive: $userId");
     print('User Id saved:$userId');
   }
+  void clearAllUserData() async {
+    var authBox = await Hive.openBox('authBox');
+    var userBox = await Hive.openBox('userBox');
 
-  // Future<void> logout() async {
-  //   var authBox = await Hive.openBox('authBox');
-  //   var userBox = await Hive.openBox('userBox');
-  //   await authBox.clear();
-  //   await userBox.clear();
-  //   await Hive.deleteBoxFromDisk('authBox');
-  //   await Hive.deleteBoxFromDisk('userBox');
-  //   await Hive.initFlutter();
-  //   print('User logged out and Hive boxes cleared');
-  //   print("Foydalanuvchi chiqdi");
-  // }
+    await authBox.clear();
+    await userBox.clear();
 
-
-  // Future<void> logout() async {
-  //   var userBox = Hive.box('userBox');
-  //   await userBox.delete('userProfile');
-  //   await userBox.delete('userToken');
-  // }
-
-  Future<void>clearHiveBox() async {
-    var box = await Hive.openBox('authBox');
-    await box.clear();
-    print('Hive box cleaned');
+    print("Barcha foydalanuvchi ma'lumotlari Hive'dan o‘chirildi.");
   }
+
 
 
   String formatImageUrl(String? imagePath) {
@@ -99,14 +131,14 @@ class ApiService {
     return imagePath;
   }
 
-
-
   String formatVideoUrl(String videoUrl) {
     if (videoUrl.startsWith('http')){
       return videoUrl;
     }
     return '${ApiService.baseImage}$videoUrl';
   }
+
+
 
 }
 

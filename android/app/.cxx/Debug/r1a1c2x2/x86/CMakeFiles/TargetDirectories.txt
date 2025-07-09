@@ -1,0 +1,2 @@
+/home/osiyo/Desktop/myprojects/flutter/ismatov/android/app/.cxx/Debug/r1a1c2x2/x86/CMakeFiles/edit_cache.dir
+/home/osiyo/Desktop/myprojects/flutter/ismatov/android/app/.cxx/Debug/r1a1c2x2/x86/CMakeFiles/rebuild_cache.dir

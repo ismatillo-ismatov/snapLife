@@ -43,6 +43,19 @@ dependencies:
   video_player: ^2.9.2
   web_socket_channel: ^2.4.0
   intl: ^0.18.0
+  visibility_detector: ^0.4.0
+  firebase_core: ^2.10.0
+  file_picker: ^10.1.9
+  flutter_sound: ^9.2.13+2
+  permission_handler: ^11.3.0
+  flutter_slidable: ^3.0.0
+  video_thumbnail:
+    path: packages/video_thumbnail
+  path_provider: ^2.1.5
+  mime: ^1.0.4
+  firebase_messaging: ^14.0.0
+  flutter_local_notifications: ^17.2.1
+  flutter_secure_storage: ^9.0.0
 
 
   # The following adds the Cupertino Icons font to your application.

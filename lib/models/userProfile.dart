@@ -1,7 +1,9 @@
+import 'dart:ffi';
+
 import 'package:ismatov/models/post.dart';
 
 class UserProfile {
-  final int id;
+   final int? id;
   final String userName;
   final String? gender;
   final String? profileImage;
@@ -10,7 +12,7 @@ class UserProfile {
   List<Post> posts;
 
   UserProfile({
-    required this.id,
+    this.id,
     required this.userName, 
     this.gender,
     this.profileImage,
@@ -51,7 +53,4 @@ class UserProfile {
   }
 
 }
-
-
-
 

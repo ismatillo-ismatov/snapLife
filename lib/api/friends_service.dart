@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:ismatov/api/api_service.dart';
+import 'package:ismatov/models/post.dart';
 import 'package:ismatov/models/userProfile.dart';
 import 'package:ismatov/models/friendsList.dart';
 import 'package:hive/hive.dart';
@@ -53,26 +55,7 @@ class FriendsService {
       return false;
     }
   }
-// static Future<List<Friend>> getFriendsList(String token) async {
-//     final url = Uri.parse('${ApiService.baseUrl}/friends');
-//
-//     try{
-//       final response = await http.get(
-//         url,
-//         headers: {
-//           'Authorization': 'Token: $token',
-//         },
-//       );
-//       if(response.statusCode == 200) {
-//         final List<dynamic> data = json.decode(response.body);
-//         return data.map((json) => Friend.fromJson(json)).toList();
-//       }
-//       return [];
-//     } catch (e) {
-//       print('Error fetching friend list: $e');
-//       return [];
-//     }
-// }
+
   Future<void> acceptRequest({
       required String token,
       required int requestId,
@@ -419,32 +402,10 @@ class FriendsService {
       throw Exception('Friends List error: $e');
     }
   }
-
-
-
-
-// Future<List<Friend>> getFriendsList(String token) async {
-  //   try{
-  //     final response = await http.get(
-  //       Uri.parse('${ApiService.baseUrl}/friends/'),
-  //       headers: {'Authorization': 'Token $token'},
-  //     );
-  //     if (response.statusCode == 200 ) {
-  //       final List<dynamic> data = jsonDecode(response.body);
-  //       if (data.isNotEmpty) print("First friend data: ${data[0]}");
-  //       return data.map((json){
-  //         if(json['user'] != null) {
-  //           return Friend.fromJson(json['user']);
-  //         }
-  //         return Friend.fromJson(json);
-  //       }).toList();
-  //     } else {
-  //       throw Exception('Failed to load friends list: ${response.statusCode}');
-  //     }
-  //   } catch(e) {
-  //     throw Exception('Friends List error: $e');
-  //   }
-  // }
-
+List<Post>getRandomFriendPosts(List<Post>allPosts,List<int>friendsIds){
+    List<Post>friendPosts = allPosts.where((post) => friendsIds.contains(post.id)).toList();
+    friendPosts.shuffle(Random());
+    return friendPosts;
+}
 
 }

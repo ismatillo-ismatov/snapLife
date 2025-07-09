@@ -42,4 +42,9 @@ class FriendRequest {
         direction: json['direction'] ?? 'none',
     );
   }
+  @override
+  String toString(){
+    return 'FriendRequest(id: $id, userName: $userName, requestFromId: $requestFromId)';
+
+  }
 }

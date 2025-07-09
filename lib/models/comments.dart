@@ -30,11 +30,9 @@ class Comment{
         id: json['id'],
         owner: json['owner'].toString(),
         post: json['post'].toString(),
-        comment: json['comment'].toString(),
-        replies: (json['replies'] as List<dynamic>)
-        .map((data) => Comment.fromJson(data))
-        .toList(),
-        commentImage: json['comment_image'].toString(),
+        comment: json['comment']?.toString(),
+        replies: (json['replies'] as List<dynamic>?)?.map((e) => Comment.fromJson(e)).toList() ?? [],
+        commentImage: json['comment_image']?.toString(),
         ownerProfileImage: json['ownerProfileImage'],
         ownerUserName: json['ownerUserName'],
         commentDate: json['comment_date'].toString(),

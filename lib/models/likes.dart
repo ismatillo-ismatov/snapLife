@@ -12,7 +12,7 @@ class Likes {
   factory Likes.fromJson(Map<String,dynamic>json){
     return Likes(
         id: json['id'],
-        posts: json['posts']
+        posts: (json['posts'] as List).map((postJson) => Post.fromJson(postJson)).toList(),
     );
 
   }

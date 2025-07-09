@@ -23,7 +23,9 @@ class FriendListItem extends StatelessWidget{
           builder: (context) => ProfilePage(
               userProfile: UserProfile(
                   id: friend.id,
-                  userName: friend.userName
+                  userName: friend.userName,
+                profileImage: friend.profileImage,
+                posts: friend.posts
               ),
           ),
       ),

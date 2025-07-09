@@ -4,14 +4,11 @@ import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:ismatov/api/api_service.dart';
-import 'package:ismatov/api/friends_service.dart';
 import 'package:ismatov/api/user_service.dart';
-import 'package:ismatov/widgets/friendsRequestScreen.dart';
-import 'package:ismatov/widgets/friends_request_page.dart';
 import 'package:ismatov/widgets/home.dart';
 import 'package:ismatov/widgets/message_widget.dart';
+import 'package:ismatov/widgets/inbox_message_widget.dart';
 import 'package:ismatov/widgets/profile.dart';
-import 'package:ismatov/widgets/search.dart'as search;
 import 'package:ismatov/widgets/posts.dart';
 import 'package:ismatov/forms/createPost.dart';
 import 'package:ismatov/models/userProfile.dart';
@@ -21,31 +18,62 @@ import 'package:ismatov/forms/loginPage.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'firebase_options.dart';
+import 'package:ismatov/services/local_notification_service.dart';
+import 'package:permission_handler/permission_handler.dart';
+
 import 'package:provider/provider.dart';
+
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  print('🔕 background push: ${message.messageId}');
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  try {
-    await Hive.deleteBoxFromDisk("authBox");
-    await Hive.deleteBoxFromDisk("userBox");
-    print("Old hive boxes deleted successfully");
-  } catch (e) {
-    print('Error deleting old boxes: $e');
-  }
-  await Hive.initFlutter();
-  await Hive.openBox('authBox');
-  await Hive.openBox('userBox');
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  LocalNotificationService.initialize();
+  // await setupFRM();
 
-  String? savedToken = Hive.box('authBox').get('auth_token');
+  await Hive.initFlutter();
+  var authBox = await Hive.openBox('authBox');
+  var userBox = await Hive.openBox('userBox');
+  if (authBox.get('token_cleared') != true) {
+    await authBox.clear();
+    await userBox.clear();
+    await authBox.put('token_cleared', true);
+    print('Hive faqat bir marta tozalandi');
+  }
+  String? savedToken = authBox.get('auth_token');
   print("Hive ichidagi userToken: $savedToken");
   UserService().checkToken();
   runApp(
-      ScreenUtilInit(
-      designSize: const Size(414,896),
+    ScreenUtilInit(
+      designSize: const Size(414, 896),
       builder: (context, child) => MyApp(),
-      ),
+    ),
   );
-  UserService().checkToken();
+}
+
+Future<void> setupFRM() async {
+  FirebaseMessaging messaging = FirebaseMessaging.instance;
+  String? token = await messaging.getToken();
+  print("📲 Firebase token: $token");
+  if (token != null) {
+    await ApiService().saveFCMToken(token);
+  }
+  if (await Permission.notification.isDenied) {
+    await Permission.notification.request();
+  }
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    print("Foreground push: ${message.notification?.title}");
+    LocalNotificationService.display(message);
+  });
 }
 
 void checkHiveData() async {
@@ -54,21 +82,20 @@ void checkHiveData() async {
 }
 
 class MyApp extends StatelessWidget {
+  final ApiService apiService = ApiService();
   @override
-  Widget build(BuildContext context){
+  Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'SnapLife',
       theme: ThemeData(
-          scaffoldBackgroundColor: Colors.white, primaryColor: Colors.white10
-      ),
+          scaffoldBackgroundColor: Colors.white, primaryColor: Colors.white10),
       home: AuthHandler(),
     );
   }
-
 }
 
-class AuthHandler extends StatelessWidget{
+class AuthHandler extends StatelessWidget {
   Future<bool> _isLoggedIn() async {
     var authBox = Hive.box('authBox');
     print("Hive ichidagi userToken: ${authBox.get('auth_token')}");
@@ -76,56 +103,58 @@ class AuthHandler extends StatelessWidget{
     return token != null && token.isNotEmpty;
   }
 
-
-
   @override
-  Widget build(BuildContext context){
+  Widget build(BuildContext context) {
     return FutureBuilder<bool>(
-      future: _isLoggedIn(),
-      builder: (context,snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting){
-          return Center(child: CircularProgressIndicator());
-        } else if(snapshot.data == true) {
-          return MainApp();
-        } else {
-          return LoginPage();
-        }
-      }
-    );
+        future: _isLoggedIn(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          } else if (snapshot.data == true) {
+            return MainApp();
+          } else {
+            return LoginPage();
+          }
+        });
   }
 }
-class MainApp extends StatefulWidget{
+
+class MainApp extends StatefulWidget {
   @override
   final UserProfile? userProfile;
-  MainApp({Key? key, this.userProfile}): super(key:key);
+  MainApp({Key? key, this.userProfile}) : super(key: key);
 
   @override
   _MainAppState createState() => _MainAppState();
-
 }
 
 class _MainAppState extends State<MainApp> {
   int _selectedIndex = 0;
   UserProfile? userProfile;
+  late Future<List<UserProfile>> _friendProfileFuture;
+  // List<UserProfile>friendProfiles = [];
   String? token;
 
+  void logoutAndClearData(BuildContext context) async {
+    final authBox = await Hive.openBox('authBox');
+    final userBox = await Hive.openBox('userBox');
+    await authBox.clear();
+    await userBox.clear();
+    print('Hive tozalandi');
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => LoginPage()),
+      (route) => false,
+    );
+  }
+
   @override
-  void initState(){
+  void initState() {
     super.initState();
     _fetchUserProfile();
-    // _setUserOnlineStatus(true);
     _fetchToken();
   }
 
-
-  // Futere<void> _setUserOnlineStatus(bool isOnline) async {
-  //   if( token != null && token!.isNotEmpty){
-  //     bool success = await FriendsService.updateOnlineStatus(isOnline, token!);
-  //     print("Online status updated: $success");
-  //   } else {
-  //     print('Token topilmadi. online status yangilanmadi');
-  //   }
-  // }
   Future<void> _fetchToken() async {
     var authBox = Hive.box('authBox');
     print("Hive ichidagi userToken: ${authBox.get('userToken')}");
@@ -134,41 +163,44 @@ class _MainAppState extends State<MainApp> {
     setState(() {
       token = fetchedToken;
     });
+    if (fetchedToken != null && fetchedToken.isNotEmpty) {
+      await setupFRM();
+    }
   }
 
   void _fetchUserProfile() async {
     String? token = await ApiService().getUserToken();
-    if(token != null){
-      try{
+    if (token != null) {
+      try {
         UserProfile profile = await UserService().fetchUserProfile(token);
         setState(() {
           userProfile = profile;
         });
-      } catch(e){
+      } catch (e) {
         print("User profile olishda xatolik:  $e");
       }
-    }else{
+    } else {
       print('Foydalanuvchi login qilmagan');
     }
   }
+
   List<Widget> _pages(UserProfile userProfile) {
     return [
-      // HomePage(),
-      const Center(child: Text("hello")),
+      HomePage(token: token!),
       SearchPage(userProfile: userProfile),
       CreatePostPage(),
       const Center(child: Text("hello")),
-      // VideoScreen(),
-      ProfilePage(userProfile: userProfile ),
+      ProfilePage(userProfile: userProfile),
     ];
   }
+
   void _onItemsTapped(int index) async {
     if (index == 2) {
       final newPost = await Navigator.push(
-          context,
-      MaterialPageRoute(
-        builder: (context) => CreatePostPage(),
-      ),
+        context,
+        MaterialPageRoute(
+          builder: (context) => CreatePostPage(),
+        ),
       );
       if (newPost != null) {
         setState(() {
@@ -181,181 +213,81 @@ class _MainAppState extends State<MainApp> {
       });
     }
   }
+
   @override
   Widget build(BuildContext context) {
-
-      return Scaffold(
+    return Scaffold(
         appBar: _selectedIndex == 0
             ? AppBar(
-          title: Text('Snaplife'),
-
-          actions: [
-            Builder(
-                builder: (context) => IconButton(
-                icon: Icon(FontAwesomeIcons.solidCircleUser),
-                onPressed: () {
-                  Navigator.push(
-                      context,
-                    MaterialPageRoute(
-                        builder:(context) => LoginPage(
-                        ),
-                    ),
-                  );
-                },
-      ),
-            ),
-            IconButton(
-                icon: Icon(Icons.favorite_outline_sharp),
-                onPressed:  () async {
-                  var authBox  = await Hive.openBox('authBox');
-                  String? currentToken = authBox.get('auth_token');
-                  if (currentToken != null && currentToken.isNotEmpty) {
-
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            FriendRequestScreen(token: token!),
-                      )
-                  );
-                  } else {
-                    print("Current token is null or Empty");
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Authentication error. Please login again."))
-                    );
-                  }
-
-                }
-            ),
-            IconButton(
-              icon: SvgPicture.asset(
-                'assets/svgs/messager.svg',
-                height: 30,
-                width: 30,
-              ),
-              onPressed: (){
-
-              },
-            ),
-          ],
-
-
-          bottom: PreferredSize(
-            preferredSize: Size.fromHeight(80),
-            child: Column(
-              children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: SingleChildScrollView(
-                    // horizontal scroll
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        Container(
-                          height: 80.h,
-                          width: 80.w,
-                          decoration: BoxDecoration(
-                            color: Color(0xfff6f7f9),
-                            border: Border.all(color: Colors.red),
-                            shape: BoxShape.circle,
-                            image: DecorationImage(
-                                image: AssetImage(
-                                    'assets/images/ismatov.jpg'),
-                                fit: BoxFit.fill),
-                          ),
-                          child: Stack(
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                    top: 40, left: 40),
-                                child: IconButton(
-                                  iconSize: 100.0,
-                                  icon: SvgPicture.asset(
-                                    'assets/svgs/plus.svg',
-                                  ),
-                                  onPressed: () {},
+                title: Text('Snaplife'),
+                actions: [
+                  IconButton(
+                      icon: Icon(Icons.favorite_outline_sharp),
+                      onPressed: () async {
+                        var authBox = await Hive.openBox('authBox');
+                        String? currentToken = authBox.get('auth_token');
+                        if (currentToken != null && currentToken.isNotEmpty) {
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    // FriendRequestScreen(token: token!
+                                    NotificationsScreen(
+                                  token: token!,
+                                  userProfile: userProfile!,
                                 ),
-                              ),
-                              SizedBox(height: 12),
-                              const Align(
-                                alignment: Alignment(0.9, 1.5),
-                                child: Padding(
-                                  padding:
-                                  const EdgeInsets.only(bottom: 5.0),
-                                  child: Text(
-                                    'your story',
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(width: 5),
-                        Container(
-                          height: 80,
-                          width: 80,
-                          decoration: BoxDecoration(
-                            color: Color(0xfff6f7f9),
-                            border: Border.all(color: Colors.green),
-                            shape: BoxShape.circle,
-                            image: DecorationImage(
-                              image: AssetImage('assets/images/5.jpg'),
-                            ),
-                          ),
-                        ),
-                      ],
+                              ));
+                        } else {
+                          print("Current token is null or Empty");
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text(
+                                  "Authentication error. Please login again.")));
+                        }
+                      }),
+                  IconButton(
+                    icon: SvgPicture.asset(
+                      'assets/svgs/messager.svg',
+                      height: 30,
+                      width: 30,
                     ),
+                    onPressed: () {
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                InboxMessageWidget(token: token!),
+                          ));
+                    },
                   ),
-                ),
-                SizedBox(
-                  height: 12,
-                ),
-                const Padding(
-                  padding: EdgeInsets.only(top: 2.0),
-                  child: Divider(
-                    color: Colors.black,
-                    thickness: 2,
-                    height: 0,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        )
+                ],
+              )
             : null,
         body: userProfile == null
             ? Center(child: CircularProgressIndicator())
             : (_selectedIndex < _pages(userProfile!).length
-            ? _pages(userProfile!)[_selectedIndex]
-            : Center(child: Text('notorgi index'),)
-
-
-        ),
+                ? _pages(userProfile!)[_selectedIndex]
+                : Center(
+                    child: Text('notorgi index'),
+                  )),
         bottomNavigationBar: BottomNavigationBar(
           unselectedIconTheme: const IconThemeData(
             size: 25,
           ),
           type: BottomNavigationBarType.fixed,
           items: const <BottomNavigationBarItem>[
-            BottomNavigationBarItem(icon: Icon(Icons.home),label:''),
-            BottomNavigationBarItem(icon: Icon(Icons.search),label:''),
-            BottomNavigationBarItem(icon: Icon(Icons.add),label:''),
-            BottomNavigationBarItem(icon: Icon(Icons.ondemand_video),label:''),
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: ''),
+            BottomNavigationBarItem(icon: Icon(Icons.search), label: ''),
+            BottomNavigationBarItem(icon: Icon(Icons.add), label: ''),
             BottomNavigationBarItem(
-                icon: Icon(FontAwesomeIcons.circleUser),
+                icon: Icon(Icons.ondemand_video), label: ''),
+            BottomNavigationBarItem(
+              icon: Icon(FontAwesomeIcons.circleUser),
               label: '',
             ),
           ],
           currentIndex: _selectedIndex,
           selectedItemColor: Colors.white,
           onTap: _onItemsTapped,
-        )
-    );
-
+        ));
   }
 }

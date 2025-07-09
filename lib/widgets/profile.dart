@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'package:ismatov/api/message_service.dart';
 import 'package:ismatov/api/user_service.dart';
 import 'package:ismatov/main.dart';
@@ -15,10 +16,10 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:ismatov/models/userProfile.dart';
 import 'package:ismatov/widgets/posts.dart';
 import 'package:ismatov/models/post.dart';
-import 'package:ismatov/widgets/post_items.dart' as items;
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
+import 'package:ismatov/widgets/video_player_widget.dart';
 
 
 class ProfilePage extends StatefulWidget {
@@ -34,17 +35,36 @@ class ProfilePage extends StatefulWidget {
 class ProfilePageState extends State<ProfilePage> {
   late Future<Map<String, dynamic>> _friendRequestFuture;
   final FriendsService _friendsService = FriendsService();
+  final ApiService _apiService = ApiService();
   bool isPressing = false;
   List<Post> userPosts = [];
   List<FriendRequest> _friendRequests = [];
   int _friendsCount = 0;
+  int _totalLikes = 0;
 
   String? _token;
   bool  isLoadingRequests = true;
   String friendRequestStatus = 'send friend request';
   String direction = 'none';
 
+void _calculateTatolLikes(){
+  int total = 0;
+  for (var post in widget.userProfile.posts) {
+    total += post.likeCount ?? 0;
+  }
+  setState(() {
+    _totalLikes = total;
+  });
+}
 
+void refreshPostLikes() async {
+  final updatePosts = await PostService().fetchPosts(_token!);
+  setState(() {
+    userPosts = updatePosts;
+    widget.userProfile.posts = updatePosts;
+  });
+  _calculateTatolLikes();
+}
 
 Future <void> loadFriendRequestStatus() async {
   try {
@@ -61,7 +81,10 @@ Future <void> loadFriendRequestStatus() async {
     super.initState();
     _loadToken();
     _loadFriendsCount();
+    _calculateTatolLikes();
+    refreshPostLikes();
   }
+
 
 
   bool get _isCurrentuser {
@@ -74,7 +97,7 @@ Future <void> loadFriendRequestStatus() async {
   final token = await ApiService().getUserToken();
   if (token != null) {
     final friends = await FriendsService().getUserFriends(
-        token, widget.userProfile.id,
+        token, widget.userProfile.id!,
     );
     setState(() {
       _friendsCount = friends.length;
@@ -209,8 +232,8 @@ Future<List<Post>> fetchUpdatedPosts() async {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.userProfile.userName),
         actions: [
+      if (_isCurrentuser)
           IconButton(
               icon: Icon(Icons.logout),
             onPressed: () async {
@@ -238,11 +261,11 @@ Future<List<Post>> fetchUpdatedPosts() async {
                 shape: BoxShape.circle,
                 border: Border.all(
                     ),
-                // borderRadius: BorderRadius.circular(80),
                 image: DecorationImage(
                   image: widget.userProfile.profileImage != null && widget.userProfile.profileImage!.isNotEmpty
-                      ? NetworkImage(widget.userProfile.profileImage!)
+                      ? NetworkImage(_apiService.formatImageUrl(widget.userProfile.profileImage!))
                       : AssetImage('assets/images/nouser.png') as ImageProvider,
+
                   scale: 1.0,
                   fit: BoxFit.cover,
 
@@ -257,7 +280,7 @@ Future<List<Post>> fetchUpdatedPosts() async {
               ),
             ),
           ),
-          SizedBox(height: 20.h,),
+          SizedBox(height: 40.h,),
           ElevatedButton(
               child: Text(isPressing ? "Please wait ...":"Message"),
               onPressed: () async {
@@ -340,17 +363,18 @@ Future<List<Post>> fetchUpdatedPosts() async {
                 );
               }
           ),
-      Padding(padding: EdgeInsets.symmetric(horizontal: 50.w, vertical: 90.h),
+      Padding(padding: EdgeInsets.symmetric(horizontal: 50.w, vertical: 60.h),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
               Text("${widget.userProfile.posts.length}\nPosts"),
+             Text("$_totalLikes\n Likes"),
              InkWell(
                onTap:() {
                  Navigator.push(
                    context,
                    MaterialPageRoute(
-                       builder: (context) =>  FriendListScreen(userId: widget.userProfile.id)
+                       builder: (context) =>  FriendListScreen(userId: widget.userProfile.id!)
                    ),
                  );
                },
@@ -365,10 +389,6 @@ Future<List<Post>> fetchUpdatedPosts() async {
                  )
 
              ),
-          // Text("$_friendsCount\nFriends"),
-          //
-          //     Text("$_friendsCount\nfriends"),
-              // Text("0\nfollowing"),
           ],
 
     ),
@@ -385,6 +405,7 @@ Future<List<Post>> fetchUpdatedPosts() async {
              final post = widget.userProfile.posts[index];
              return GestureDetector(
                  onTap: () async {
+                  VideoManager().pauseAll();
                    final deletedPostId = await Navigator.push(
                        context,
                        MaterialPageRoute(
@@ -401,24 +422,53 @@ Future<List<Post>> fetchUpdatedPosts() async {
                        widget.userProfile.posts.removeWhere((post) => post.id ==  deletedPostId);
                      });
                    }
-
+                _calculateTatolLikes();
                  },
+               child: Card(
+                 margin: EdgeInsets.all(1),
+                           child: post.postImage != null && post.postImage!.isNotEmpty
+                           ? Image.network(
+                             ApiService().formatImageUrl(post.postImage!),
+               fit: BoxFit.cover,
+               )
+             : post.postVideo != null && post.postVideo!.isNotEmpty
+                             ? FutureBuilder<File?>(
+                                 future: generateVideoThumbnail(ApiService().formatVideoUrl(post.postVideo!)),
+                                 builder: (context,snapshot) {
+                                   if (snapshot.connectionState == ConnectionState.waiting){
+                                     return Center(child: CircularProgressIndicator(strokeWidth: 1.w,));
+                                   } else if (snapshot.hasData && snapshot.data != null ) {
+                                     return Stack(
+                                       fit: StackFit.expand,
+                                       children: [
+                                         Image.file(
+                                           snapshot.data!,
+                                           fit: BoxFit.cover,
+                                         ),
+                                         Positioned(
+                                         bottom: 8,
+                                             right: 8,
+                                             child: Icon(Icons.play_circle_outline, color: Colors.white, size: 24),
+                                         )
+                                       ],
+                                     );
+                                   } else {
+                                     return Image.asset(
+                                       'assets/images/nouser.png',
+                                       fit: BoxFit.cover,
+                                     );
+                                   }
 
-             child: Card(
-               margin: EdgeInsets.all(1),
-                     child: Container(
-                       decoration: BoxDecoration(
-                         image: DecorationImage(
-                             image: post.postImage != null &&
-                             post.postImage!.isNotEmpty
-                                 ? NetworkImage(ApiService().formatImageUrl(post.postImage!))
-                                 :AssetImage('assets/images/nouser.png')
-                                 as ImageProvider,
-                           fit: BoxFit.cover,
-                         )
-                       ),
-                     ),
-             ),
+                                 }
+                             )
+                                 : Image.asset(
+                               'assets/images/nouser.png',
+                               fit: BoxFit.cover,
+                             ),
+                           )
+
+
+           
                    );
 
              },
@@ -455,15 +505,24 @@ Future<List<Post>> fetchUpdatedPosts() async {
         return Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-            isPressing ? "Canceling..." :"Request Sent",
-            style: TextStyle(color: isPressing ? Colors.orange :Colors.grey, fontSize:16),
-            ),
-            SizedBox(width: 8,),
-            IconButton(
-                icon: Icon(Icons.cancel,color: Colors.orange),
-                onPressed: isPressing ? null : () => _cancelFriendRequest(widget.userProfile.id),
+            SizedBox(width: 8.w,),
+            TextButton(
+              child: Text('cancel request',
+                  style: TextStyle(color: Colors.white)
+              ),
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  side: BorderSide(
+                    color: Colors.red,
+                    width: 2
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20)
+                  )
+                ),
+                onPressed: isPressing ? null : () => _cancelFriendRequest(widget.userProfile.id!),
             )
+           
           ]
         );
       }
@@ -475,18 +534,27 @@ Future<List<Post>> fetchUpdatedPosts() async {
               : Text("Send Friend Request"),
       );
     } else if (status == 'Accepted') {
-      // return Text(
-      //   "Friend",
-      //   style: TextStyle(color: Colors.green, fontSize: 16),
-      // );
-    return IconButton(
-    icon: Icon(Icons.delete,color: Colors.red),
-    onPressed:  isPressing ? null : () {
-      if (widget.userProfile.id != null){
-      _showDeleteFriendDialog(widget.userProfile.id);
-    }
-    },
+
+    return
+      TextButton(
+        child: Text("delete Friend"),
+      onPressed:  isPressing ? null : () {
+        if (widget.userProfile.id != null) {
+          _showDeleteFriendDialog(widget.userProfile.id!);
+        }
+      },
+          style: TextButton.styleFrom(
+      backgroundColor: Colors.red,
+          side: BorderSide(
+              color: Colors.red,
+              width: 2
+          ),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20)
+          ),
+          )
     );
+
     } else {
       return ElevatedButton(
         onPressed: isPressing ? null : _sendFriendRequest,

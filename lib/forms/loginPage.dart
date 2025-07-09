@@ -36,7 +36,7 @@ class _LoginPageState extends State<LoginPage>{
         Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => MainApp(userProfile: userProfile),)
+              builder: (context) => MainApp(userProfile: userProfile,),)
         );
         print("Login successful");
       } catch(e){
