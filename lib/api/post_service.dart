@@ -56,6 +56,37 @@ class PostService {
 
 
 
+  Future<Post> fetchPost(int postId, String token) async {
+    final response = await http.get(
+      Uri.parse('${ApiService.baseUrl}/posts/$postId/'),
+      headers: {
+        'Authorization': 'Token $token',
+        'Content-Type': 'application/json',
+      },
+    );
+    print("Fetch post response status: ${response.statusCode}");
+    print("Fetch post response body: ${response.body}");
+
+    if (response.statusCode == 200) {
+      final postMap = json.decode(response.body) as Map<String, dynamic>;
+      if (postMap['postImage'] != null && postMap['postImage'].isNotEmpty) {
+        postMap['postImage'] = postMap['postImage'];
+      } else {
+        postMap['postImage'] = null;
+      }
+
+      if (postMap['postVideo'] != null && postMap['postVideo'].isNotEmpty) {
+        postMap['postVideo'] = ApiService().formatVideoUrl(postMap['postVideo']);
+        print("Formatted video URL: ${postMap['postVideo']}");
+      }
+
+      return Post.fromJson(postMap);
+    } else {
+      throw Exception('Failed to load post: ${response.statusCode}');
+    }
+  }
+
+
 
 
   Future<Post> createPost({
@@ -180,6 +211,22 @@ Future<void>deletePost({
       return json.decode(response.body);
     } else {
       throw Exception("Postlarni olishda xatolik: ${response.statusCode}");
+    }
+
+  }
+  Future<List<dynamic>> fetchRandomPosts(String token) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${ApiService.baseUrl}/posts/random-posts/'),
+        headers: {'Authorization': 'Token $token'},
+      );
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception("Random postlarni olishda xato: ${response.statusCode}");
+      }
+    } catch (e) {
+      throw Exception("Random postlarni yuklashda xato: $e");
     }
   }
 

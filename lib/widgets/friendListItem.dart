@@ -41,8 +41,7 @@ class FriendListItem extends StatelessWidget{
           style: const TextStyle(fontWeight: FontWeight.w500),
         ),
 
-        // subtitle: buildStatus(friend),
-        trailing: _buildMessageButton(),
+        // trailing: _buildMessageButton(),
         // onTap: onTap,
     );
   }
@@ -61,16 +60,38 @@ class FriendListItem extends StatelessWidget{
         ],
       );
     }
-    ImageProvider? _getProfileImage() {
-    if (friend.profileImage == null || friend.profileImage!.isEmpty){
+
+  ImageProvider? _getProfileImage() {
+    print("Profile image URL: ${friend.profileImage}");
+    if (friend.profileImage == null || friend.profileImage!.isEmpty) {
       return const AssetImage('assets/images/nouser.png');
     }
     try {
-      return NetworkImage(friend.profileImage!);
-    } catch(e) {
-      return const AssetImage('assets/nouser.png');
+      Uri uri = Uri.parse(friend.profileImage!);
+      if (!uri.isAbsolute || uri.scheme.isEmpty || uri.host.isEmpty) {
+        return const AssetImage('assets/images/nouser.png');
+      }
+      // Noto‘g‘ri prefiksni olib tashlash
+      String cleanedUrl = friend.profileImage!.replaceFirst(RegExp(r'^http://192\.168\.\d+\.\d+:\d+'), '');
+      print("Cleaned profile image URL: $cleanedUrl");
+      return NetworkImage(cleanedUrl);
+    } catch (e) {
+      print("Error parsing profile image URL: $e");
+      return const AssetImage('assets/images/nouser.png');
     }
-    }
+  }
+    // ImageProvider? _getProfileImage() {
+    //   print("Profile image URL: ${friend.profileImage}");
+    // if (friend.profileImage == null || friend.profileImage!.isEmpty){
+    //   return const AssetImage('assets/images/nouser.png');
+    // }
+    // Uri? uri = Uri.tryParse(friend.profileImage!);
+    // if (uri == null || !uri.hasAbsolutePath || uri.host.isNotEmpty){
+    //   return const AssetImage('assets/images/nouser.png');
+    // }
+    // return NetworkImage(friend.profileImage!);
+    //
+    // }
 
     Widget _buildOnlineIndicator(BuildContext context) {
     return Container(
@@ -104,13 +125,13 @@ class FriendListItem extends StatelessWidget{
     }
 
 
-    Widget _buildMessageButton() {
-    return IconButton(
-        icon: const Icon(Icons.message_outlined),
-      onPressed: onTap,
-      tooltip: "sendMessage",
-    );
-    }
+    // Widget _buildMessageButton() {
+    // return IconButton(
+    //     icon: const Icon(Icons.message_outlined),
+    //   onPressed: onTap,
+    //   tooltip: "sendMessage",
+    // );
+    // }
 
 }
 

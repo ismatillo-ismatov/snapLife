@@ -1,40 +1,18 @@
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
-
-class LocalNotificationService {
-  static final FlutterLocalNotificationsPlugin _notificationsPlugin =
-      FlutterLocalNotificationsPlugin();
-
-  static void initialize() {
-    final InitializationSettings initializationSettings =
-        InitializationSettings(
-      android: AndroidInitializationSettings('@mipmap/ic_launcher'), // <-- app icon
-    );
-
-    _notificationsPlugin.initialize(initializationSettings);
-  }
-
-  static void display(RemoteMessage message) async {
-    try {
-      final id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-
-      final NotificationDetails notificationDetails = NotificationDetails(
-        android: AndroidNotificationDetails(
-          'snaplife_channel', // <-- kanal nomi
-          'SnapLife Notifications',
-          importance: Importance.max,
-          priority: Priority.high,
-        ),
-      );
-
-      await _notificationsPlugin.show(
-        id,
-        message.notification?.title ?? '🚀 New Notification',
-        message.notification?.body ?? '',
-        notificationDetails,
-      );
-    } catch (e) {
-      print("📛 Local notification error: $e");
-    }
-  }
-}
+// leading: CircleAvatar(
+// radius: 24,
+// child: (notification.sender.profileImage != null && notification.sender.profileImage!.isNotEmpty)
+// ? ClipOval(
+// child: Image.network(
+// ApiService().formatImageUrl(notification.sender.profileImage!),
+// fit: BoxFit.cover,
+// width: 48,
+// height: 48,
+// errorBuilder: (context, error, stackTrace) {
+// print('Image load error: $error'); // Xato logini chop etish
+// return Icon(Icons.person, size: 28, color: Colors.grey);
+// },
+// ),
+// )
+//     : Icon(Icons.person, size: 28, color: Colors.grey),
+// backgroundColor: Colors.grey.shade200,
+// ),

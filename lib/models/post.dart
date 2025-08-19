@@ -4,7 +4,8 @@ import 'package:ismatov/api/api_service.dart';
 
 class Post {
   final int id;
-  final int ownerId;
+  // final int ownerId;
+  final int? profileId;
   final String userName;
   final String? ownerProfileImage;
   final String content;
@@ -19,7 +20,7 @@ class Post {
 
   Post({
     required this.id,
-    required this.ownerId,
+    this.profileId,
     required this.content,
     required this.userName,
     this.ownerProfileImage,
@@ -37,7 +38,7 @@ class Post {
     final owner = json['owner'] ?? {};
     return Post(
       id: json['id'],
-      ownerId: owner['id'] ?? 0,
+      profileId: owner['profile_id'] ?? 0,
       content: json['content'],
       userName: owner['username'] ?? '',
       ownerProfileImage: owner['profileImage'],
@@ -47,8 +48,9 @@ class Post {
       liked: json['liked'] ?? false,
       likeCount: json['likeCount'] ?? 0,
       comments: (json['comments'] as List<dynamic>?)
-      ?.map((e) => Comment.fromJson(e))
-      .toList() ?? [],
+              ?.map((e) => Comment.fromJson(e))
+              .toList() ??
+          [],
       commentCount: int.tryParse(['comment_count'].toString()) ?? 0,
       likeId: json['likeId'],
     );

@@ -21,12 +21,23 @@ class Friend{
 
 }): posts = posts ?? [];
   factory Friend.fromJson(Map<String,dynamic>json) {
+    String? imagePath = json['profileImage'];
+    String? profileImageUrl;
+    if (imagePath != null && imagePath.isNotEmpty){
+      if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+        profileImageUrl = imagePath;
+      } else {
+        profileImageUrl = '${ApiService.baseImage}$imagePath';
+      }
+    }
+
     return Friend(
         id: json['id'] as int? ?? 0 ,
         userName: json['userName'] as String? ?? 'No username',
-        profileImage: json['profileImage'] != null
-        ? '${ApiService.baseImage}${json['profileImage']}'
-            :null,
+        profileImage: profileImageUrl,
+        // profileImage: json['profileImage'] != null
+        // ? '${ApiService.baseImage}${json['profileImage']}'
+        //     :null,
       posts: json['posts'] != null
       ?(json ['posts'] as List<dynamic>)
       .map((post) => Post.fromJson(post)).toList()

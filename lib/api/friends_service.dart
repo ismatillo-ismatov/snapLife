@@ -381,6 +381,7 @@ class FriendsService {
     }
   }
 
+
   Future<List<Friend>> getAllFriends(String token) async {
     try{
       final response = await http.get(

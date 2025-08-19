@@ -1,522 +1,521 @@
 import 'dart:convert';
-import 'package:flutter_slidable/flutter_slidable.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
-import 'package:hive/hive.dart';
+
 import 'package:ismatov/api/api_service.dart';
 import 'package:ismatov/api/message_service.dart';
-import 'package:ismatov/api/user_service.dart';
 import 'package:ismatov/models/messages.dart';
 import 'package:ismatov/models/shortUserprofile.dart';
-import 'package:ismatov/models/userProfile.dart';
-import 'package:ismatov/widgets/profile.dart';
-import 'package:provider/provider.dart';
-import 'package:ismatov/widgets/chat_provider.dart';
-import 'package:web_socket_channel/io.dart';
 
-class ChatPage extends StatefulWidget{
-  final int sender;
-  final int receiver;
+class ChatPage extends StatefulWidget {
+  final int sender; // Profile ID (jo'natuvchi)
+  final int receiver; // Profile ID (qabul qiluvchi)
 
-  const ChatPage({Key? key, required this.sender, required this.receiver}) : super(key: key);
+  const ChatPage({Key? key, required this.sender, required this.receiver})
+      : super(key: key);
 
   @override
-  _ChatPageState createState() => _ChatPageState();
+  State<ChatPage> createState() => _ChatPageState();
 }
 
-
-class _ChatPageState extends State<ChatPage>{
-  final MessageService messageService = MessageService();
-  List<Message> messages = [];
-  String? token;
-  PartialMessage? _replyIngTo;
-  // Message? _replyIngTo;
+class _ChatPageState extends State<ChatPage> {
+  final MessageService _messageService = MessageService();
   final TextEditingController _messageController = TextEditingController();
-
+  final ScrollController _scrollCtrl = ScrollController();
+  List<Message> messages = [];
+  String? _token;
+  PartialMessage? _replyIngTo;
   Timer? _timer;
+
   @override
   void initState() {
     super.initState();
     _initializeChat();
-
   }
+
+
   @override
   void dispose() {
     _timer?.cancel();
-    messageService.disconnect();
+    _messageService.disconnect();
     _messageController.dispose();
+    _scrollCtrl.dispose();
     super.dispose();
   }
+  void handlePushNotification(Map<String, dynamic> data) {
+  if (data['notification_type'] == 'message' && data['receiver_id'] == widget.receiver.toString()) {
+    _messageService.connectToWebSocket(widget.sender, widget.receiver, (newMessage) {
+      if (!mounted) return;
+      setState(() {
+        messages = [...messages, newMessage];
+      });
+      _scrollToBottom();
+    });
+  }
+}
 
-void _initializeChat() async {
-  print('ChatPage initialized with sender:${widget.sender},receiver:${widget.receiver}');
-   token = await ApiService().getUserToken();
-   if (token == null) {
-     print("Token yoqm foydalanuvchi lofin qilmagan");
-   }
-  messageService.connectToWebSocket(
-      widget.sender,
-      widget.receiver,
-          (newMessage) {
-        if (mounted) {
-          setState(() {
-            messages.add(newMessage);
-          });
-        }
-      }
+  Future<void> _initializeChat() async {
+  debugPrint('ChatPage init: sender=${widget.sender}, receiver=${widget.receiver}');
+  _token = await ApiService().getUserToken();
+  if (_token == null) {
+    debugPrint("Token yo'q: login qiling");
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Token topilmadi. Iltimos, qayta login qiling")),
+    );
+    return;
+  }
+
+  // WebSocket ulanadi
+  _messageService.connectToWebSocket(
+    widget.sender,
+    widget.receiver,
+    (newMessage) {
+      if (!mounted) return;
+      debugPrint("onMessageReceived: ${newMessage.message}, ID: ${newMessage.id}");
+      setState(() {
+  debugPrint("setState chaqirildi, messages oldin: ${messages.map((m) => m.id).toList()}");
+  final idx = messages.indexWhere((m) => m.id == 0 && m.message == newMessage.message && m.sender.id == newMessage.sender.id);
+  if (idx >= 0) {
+    debugPrint("Optimistik xabar almashtirildi: index=$idx");
+    messages[idx] = newMessage;
+  } else {
+    debugPrint("Yangi xabar qo'shildi: ${newMessage.message}");
+    messages = [...messages, newMessage];
+  }
+  debugPrint("setState chaqirildi, messages keyin: ${messages.map((m) => m.id).toList()}");
+});
+      _scrollToBottom();
+    },
   );
-  messageService.markAllAsRead(
+
+  // Chatni ochganda hammasini o‘qilgan deb belgilash
+  if (_token != null) {
+    unawaited(_messageService.markAllAsRead(
       senderId: widget.receiver,
       receiverId: widget.sender,
-      token: token!
-  );
-  _fetchMessages();
+      token: _token!,
+    ));
+  }
 
+  await _fetchMessages();
 }
 
   Future<void> _fetchMessages() async {
-    try{
-      token = await ApiService().getUserToken();
-      if(token == null) {
+    try {
+      _token ??= await ApiService().getUserToken();
+      if (_token == null) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Token not found. Please log in again."))
+          const SnackBar(content: Text("Token topilmadi. Iltimos, qayta login qiling")),
         );
         return;
       }
-      print("Fetching messages for sender: ${widget.sender}, receiver: ${widget.receiver}");
-      final fetchedMessages = await MessageService().fetchMessages(
-          widget.sender,
-          widget.receiver,
-          token!
+      final fetched = await _messageService.fetchMessages(
+        widget.sender,
+        widget.receiver,
+        _token!,
       );
-      if (mounted) {
-        setState(() {
-          messages = fetchedMessages;
-
-        });
-      }
-    } catch(e){
+      if (!mounted) return;
+      setState(() {
+        debugPrint("fetchMessages: ${fetched.length} ta xabar yuklandi");
+        messages = [...fetched]; // Yangi instans
+      });
+      _jumpToBottom();
+    } catch (e) {
+      debugPrint("Fetch messages error: $e");
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to fetch messages: $e"))
+        SnackBar(content: Text("Xabarlarni olishda xato: $e")),
       );
-
     }
   }
 
-@override
-void didChangeDependencies(){
-    super.didChangeDependencies();
-}
+  void _appendAndScroll(Message m) {
+    setState(() {
+      debugPrint("appendAndScroll: ${m.message}");
+      messages = [...messages, m]; // Yangi instans
+    });
+    _scrollToBottom();
+  }
 
+  void _scrollToBottom() {
+    if (!_scrollCtrl.hasClients) {
+      debugPrint("scrollCtrl hasClients=false");
+      return;
+    }
+    debugPrint("scrollToBottom chaqirildi, maxScrollExtent: ${_scrollCtrl.position.maxScrollExtent}");
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollCtrl.animateTo(
+        _scrollCtrl.position.maxScrollExtent + 50, // Qo‘shimcha bufer
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    });
+  }
 
-Future<void> _pickImage() async {
+  void _jumpToBottom() {
+    if (!_scrollCtrl.hasClients) {
+      debugPrint("jumpToBottom hasClients=false");
+      return;
+    }
+    debugPrint("jumpToBottom chaqirildi, maxScrollExtent: ${_scrollCtrl.position.maxScrollExtent}");
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent + 50); // Qo‘shimcha bufer
+    });
+  }
+
+  Future<void> _sendMessage() async {
+    final text = _messageController.text.trim();
+    if (text.isEmpty) return;
+
+    final replyTo = _replyIngTo;
+    _messageController.clear();
+    setState(() => _replyIngTo = null);
+
+    // Optimistik xabar
+    final optimistic = Message(
+      id: 0,
+      sender: ShortUserProfile(id: widget.sender, userName: 'You', profileImage: null),
+      receiver: ShortUserProfile(id: widget.receiver, userName: '', profileImage: null),
+      message: text,
+      is_read: false,
+      timestamp: DateTime.now().toIso8601String(),
+      type: 'text',
+      file: null,
+      repliedTo: replyTo,
+    );
+    _appendAndScroll(optimistic);
+
+    try {
+      final ok = await _messageService.sendMessage(
+        widget.sender,
+        widget.receiver,
+        text,
+        type: 'text',
+        repliedToId: replyTo?.id,
+      );
+      if (!ok) {
+        debugPrint('WS yuborish muvaffaqiyatsiz');
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Xabar yuborishda xato")),
+        );
+        setState(() {
+          debugPrint("Optimistik xabar o'chirildi: $text");
+          messages = messages.where((m) => m.id != 0 || m.message != text).toList(); // Yangi instans
+        });
+      }
+    } catch (e) {
+      debugPrint("Xabar yuborishda xato: $e");
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Xabar yuborilmadi: $e")),
+      );
+      setState(() {
+        debugPrint("Optimistik xabar o'chirildi: $text");
+        messages = messages.where((m) => m.id != 0 || m.message != text).toList(); // Yangi instans
+      });
+    }
+  }
+
+  Future<void> _pickImage() async {
     final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       await _sendMediaMessage(pickedFile.path, 'image');
     }
-}
+  }
 
-Future<void> _pickVideo() async {
+  Future<void> _pickVideo() async {
     final pickedFile = await ImagePicker().pickVideo(source: ImageSource.gallery);
     if (pickedFile != null) {
       await _sendMediaMessage(pickedFile.path, 'video');
     }
-}
+  }
 
-Future<void> _recordAudio() async {
+  Future<void> _recordAudio() async {
+    // TODO: implement audio record and send
+  }
 
-}
+  Future<void> _sendMediaMessage(String filePath, String type) async {
+    if (filePath.isEmpty) return;
 
-Future<void> _sendMediaMessage(String filePath, String type) async {
-    if (filePath.isNotEmpty) {
-      final file = File(filePath);
-      if (!file.existsSync()) return;
+    final file = File(filePath);
+    if (!file.existsSync()) return;
 
-          try{
-            String? token = await ApiService().getUserToken();
-            if (token == null) throw Exception("token topilmadi");
-            final uri = Uri.parse("${ApiService.baseUrl}/messages/");
-            final request = http.MultipartRequest('POST',uri)
-              ..headers['Authorization'] = 'Token $token'
-              ..fields['receiver'] = widget.receiver.toString()
-              ..fields['type'] = type
-              ..fields['message'] = ''
-              ..files.add(await http.MultipartFile.fromPath('file', filePath));
+    try {
+      final token = await ApiService().getUserToken();
+      if (token == null) throw Exception("token topilmadi");
 
-            final responseStream = await request.send();
-            final response = await http.Response.fromStream(responseStream);
-            if (response.statusCode == 201 || response.statusCode == 200 ) {
-              print("send media file");
+      final uri = Uri.parse("${ApiService.baseUrl}/messages/");
+      final request = http.MultipartRequest('POST', uri)
+        ..headers['Authorization'] = 'Token $token'
+        ..fields['receiver'] = widget.receiver.toString()
+        ..fields['type'] = type
+        ..fields['message'] = ''
+        ..files.add(await http.MultipartFile.fromPath('file', filePath));
 
-              final responseData = jsonDecode(response.body);
-              final newMessage = Message.fromJson(responseData);
-              setState(() {
-                messages.add(newMessage);
-              });
-            } else {
-              print('send error: ${response.statusCode}');
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("not send media: ${response.statusCode}")),
+      final responseStream = await request.send();
+      final response = await http.Response.fromStream(responseStream);
 
-              );
-            }
-
-
-          } catch (e) {
-            print("Error: $e");
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("Send media error: $e")),
-            );
-          }
-    }
-
-
-}
-
-
-String _formatTime(String timestamp) {
-    final time = DateTime.parse(timestamp).toLocal();
-    return "${time.hour.toString().padLeft(2,'0')}:${time.minute.toString().padLeft(2,'0')}";
-}
-
-  void _sendMessage() async {
-    if(_messageController.text.isNotEmpty) {
-      final messageText = _messageController.text;
-      _messageController.clear();
-      final replyTo = _replyIngTo;
-
-      final newMessage = Message(
-        id: 0,
-        sender: ShortUserProfile(id: widget.sender, userName: 'You',profileImage: null,),
-        receiver: ShortUserProfile(id: widget.receiver, userName: '',profileImage: null),
-          message: messageText,
-        is_read: false,
-        timestamp: DateTime.now().toIso8601String(),
-        type: 'text',
-        file: null,
-        repliedTo: replyTo,
-      );
-      setState(() {
-        messages.add(newMessage);
-        _replyIngTo = null;
-      });
-      try {
-        bool success = await messageService.sendMessage(
-            widget.sender,
-            widget.receiver,
-            messageText,
-            type: 'text',
-            repliedToId: replyTo?.id,
-
-        );
-        if(success){
-          print('xabar yuborildi');
-        }else {
-          print('Xotolik yuz berdi');
-        }
-      } catch (e){
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        final newMessage = Message.fromJson(responseData);
+        _appendAndScroll(newMessage);
+      } else {
+        debugPrint('media send error: ${response.statusCode}');
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Xabar yuborilmadi $e")),
+          SnackBar(content: Text("Media yuborilmadi: ${response.statusCode}")),
         );
       }
+    } catch (e) {
+      debugPrint("Media yuborishda xato: $e");
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Media yuborilmadi: $e")),
+      );
     }
   }
 
-  Widget _buildReplyPreveiw() {
-    if (_replyIngTo == null) return SizedBox.shrink();
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(8),
-        border: Border(
-          bottom: BorderSide(color: Colors.grey.shade400),
-        ),
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Chat"),
       ),
-      child: Row(
+      body: Column(
         children: [
           Expanded(
-            child: Column(
-              children: [
-
-            Text(
-              "Replying to: ${_replyIngTo!.sender.userName}",
-              style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                fontSize: 12,
-                color: Colors.black87,
-              ),
+            child: ListView.builder(
+              key: ValueKey(messages.length),
+              controller: _scrollCtrl,
+              itemCount: messages.length,
+              itemBuilder: (context, index) {
+                debugPrint("Rendering message at index: $index, ID: ${messages[index].id}");
+                final message = messages[index];
+                final isMe = message.sender.id == widget.sender;
+                final isRead = message.is_read;
+                return KeyedSubtree(
+                  key: ValueKey("${message.id}_${message.timestamp}"),
+                  // key: ValueKey(message.id),
+                  child: _buildMessageTile(message, isMe, isRead),
+                );
+              },
             ),
-                Text(
-                  _replyIngTo!.message,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontStyle: FontStyle.italic,
-                    fontSize: 13,
-                    color: Colors.black54,
-                  ),
-                ),
-      ]
           ),
-          ),
-          IconButton(
-            icon: Icon(Icons.close),
-            onPressed: () {
-              setState(() {
-                _replyIngTo = null;
-              });
-            },
-          )
+          _buildInputArea(),
         ],
       ),
     );
   }
 
-
-
-
-
-  Widget _buildMessageInput() {
-    return Row(
-      children: [
-        IconButton(
-            icon: Icon(Icons.image),
-          onPressed: _pickImage,
-        ),
-
-        IconButton(
-          icon: Icon(Icons.videocam),
-          onPressed: _pickVideo,
-        ),
-        IconButton(
-          icon: Icon(Icons.mic),
-          onPressed: _recordAudio,
-        ),
-
-
-
-        Expanded(
-            child: TextField(
-              controller:  _messageController,
-              decoration: InputDecoration(
-                hintText: 'Write a messege',
-                border:OutlineInputBorder(),
+  Widget _buildMessageTile(Message message, bool isMe, bool isRead) {
+    return Slidable(
+      endActionPane: ActionPane(
+        motion: const ScrollMotion(),
+        extentRatio: 0.25,
+        children: [
+          SlidableAction(
+            onPressed: (context) {
+              setState(() {
+                _replyIngTo = PartialMessage(
+                  id: message.id,
+                  message: message.message,
+                  sender: message.sender,
+                  timestamp: message.timestamp,
+                );
+              });
+            },
+            backgroundColor: Colors.green,
+            foregroundColor: Colors.white,
+            icon: Icons.reply,
+          ),
+        ],
+      ),
+      child: Align(
+        alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isMe ? Colors.blue : Colors.grey[300],
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+            children: [
+              if (message.repliedTo != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  margin: const EdgeInsets.only(bottom: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        message.repliedTo!.sender.userName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: Colors.black54,
+                        ),
+                      ),
+                      Text(
+                        message.repliedTo!.message,
+                        style: const TextStyle(
+                          fontStyle: FontStyle.italic,
+                          fontSize: 12,
+                          color: Colors.black54,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              if (message.type == 'text') ...[
+                Text(
+                  message.message,
+                  style: TextStyle(
+                    color: isMe ? Colors.white : Colors.black,
+                  ),
+                ),
+              ] else if (message.type == 'image' && message.file != null) ...[
+                Image.network(
+                  ApiService().formatImageUrl(message.file!),
+                  width: 200,
+                  fit: BoxFit.cover,
+                ),
+                const SizedBox(height: 8),
+              ] else if (message.type == 'video' && message.file != null) ...[
+                Icon(
+                  Icons.videocam,
+                  color: isMe ? Colors.white : Colors.black,
+                ),
+                Text(
+                  "send video",
+                  style: TextStyle(
+                    color: isMe ? Colors.white : Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _formatTime(message.timestamp),
+                    style: TextStyle(
+                      color: isMe ? Colors.white : Colors.black54,
+                      fontSize: 10,
+                    ),
+                  ),
+                  if (isMe) ...[
+                    const SizedBox(width: 4),
+                    Icon(
+                      isRead ? Icons.done_all : Icons.check,
+                      size: 14,
+                      color: isRead ? Colors.greenAccent : Colors.white70,
+                    ),
+                  ],
+                ],
               ),
-            ),
+            ],
+          ),
         ),
-        IconButton(
-          icon: Icon(Icons.send),
-            onPressed: _sendMessage,
-        )
-      ],
+      ),
     );
   }
 
+  String _formatTime(String timestamp) {
+    final dateTime = DateTime.parse(timestamp).toLocal();
+    return "${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}";
+  }
 
-
-  @override
-  Widget build(BuildContext context) {
-    final receiverProfile = messages.isNotEmpty
-        ? (messages.first.sender.id == widget.receiver
-        ? messages.first.sender
-        : messages.first.receiver)
-        : null;
-    return Scaffold(
-        appBar: AppBar(
-          title:  receiverProfile != null
-          ? InkWell(
-              onTap: () async {
-                final token = await ApiService().getUserToken();
-                if (token != null) {
-                  try {
-                    final userProfile = await UserService()
-                        .fetchUserProfileById(
-                        receiverProfile.id, token!
-                    );
-                    // int senderId =
-
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              ProfilePage( userProfile: userProfile),
-                        )
-
-                    );
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Profile yuklab bolmadi: $e"))
-                    );
-                  }
-                }
-              },
+  Widget _buildInputArea() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      color: Colors.grey[200],
+      child: Column(
+        children: [
+          if (_replyIngTo != null) ...[
+            Container(
+              padding: const EdgeInsets.all(8),
+              margin: const EdgeInsets.only(bottom: 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+              ),
               child: Row(
                 children: [
-                  CircleAvatar(
-                    backgroundImage: receiverProfile != null
-                    ? NetworkImage(
-                        ApiService().formatImageUrl(receiverProfile.profileImage))
-                        : null,
-                    child: receiverProfile.profileImage == null
-                        ? Icon(Icons.person)
-                        : null,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _replyIngTo!.sender.userName,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          _replyIngTo!.message,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
-                  SizedBox(width: 8),
-                  Text(receiverProfile.userName),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () {
+                      setState(() => _replyIngTo = null);
+                    },
+                  ),
                 ],
-              )
-
-          )
-              : Text("chat"),
-        ),
-        body: Column(
-          children: [
-            Expanded(
-              child: messages.isEmpty
-                  ? Center(child: Text("No message yet"),)
-                  : ListView.builder(
-                  itemCount: messages.length,
-                  itemBuilder: (context,index) {
-                    final message = messages[index];
-                    return _buildMessageBubble(message);
-                  }
               ),
             ),
-            _buildReplyPreveiw(),
-            _buildMessageInput(),
           ],
-        ),
-
-    );
-
-  }
-
-  Widget _buildMessageBubble(Message message) {
-    final isMe = message.sender.id == widget.sender;
-    final isRead = message.is_read;
-    return Slidable(
-        key: ValueKey(message.id),
-        endActionPane: ActionPane(
-            motion: const ScrollMotion(),
-            extentRatio: 0.25,
+          Row(
             children: [
-              SlidableAction(
-                  onPressed: (context){
-                    setState(() {
-                      _replyIngTo = PartialMessage(
-                          id: message.id,
-                          message: message.message,
-                          sender: message.sender,
-                          timestamp: message.timestamp
-                      );
-                      // _replyIngTo = message;
-                    });
-    },
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-                icon: Icons.reply,
-                // label: 'Reply',
-        )
-            ]
-        ),
-        child: Align(
-            alignment: isMe ? Alignment.centerRight: Alignment.centerLeft,
-            child: Container(
-              margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isMe ? Colors.blue: Colors.grey[300],
-                borderRadius: BorderRadius.circular(12),
+              IconButton(
+                icon: const Icon(Icons.image),
+                onPressed: _pickImage,
               ),
-              child: Column(
-                  crossAxisAlignment:
-                  isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                  children: [
-                    if (message.repliedTo != null) ... [
-                      Container(
-                        padding: EdgeInsets.all(6),
-                        margin: EdgeInsets.only(bottom: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade200,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              message.repliedTo!.sender.userName,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                                color: Colors.black12,
-                              ),
-                            ),
-                            Text(
-                              message.repliedTo!.message,
-                              style: TextStyle(
-                                fontStyle: FontStyle.italic,
-                                fontSize: 12,
-                                color: Colors.black54,
-                              ),
-                              maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                            )
-
-                          ],
-                        ),
-                      )
-                    ],
-                    if (message.type == 'text') ... [
-
-                    Text(
-                      message.message,
-                      style: TextStyle(color: isMe ? Colors.white : Colors.black),
-                    ),
-                    ] else if (message.type == 'image' && message.file != null ) ...[
-                      Image.network(
-                        ApiService().formatImageUrl(message.file!),
-                        width: 200,
-                        fit: BoxFit.cover,
-                      ),
-                      SizedBox(height: 8),
-                    ] else if (message.type == 'video' && message.file != null) ...[
-                      Icon(Icons.videocam, color: isMe ? Colors.white: Colors.black),
-                      Text(
-                        "send video",
-                        style: TextStyle(color: isMe ? Colors.white : Colors.black),
-                      ),
-                      SizedBox(height: 8),
-                    ],
-                    Text(
-                      _formatTime(message.timestamp),
-                      style: TextStyle(
-                        color: isMe ? Colors.white : Colors.black54,
-                        fontSize: 10,
-                      ),
-                    ),
-                    if (isMe) ...[
-                      SizedBox(width: 4),
-                      Icon(
-                          isRead ? Icons.done_all : Icons.check,
-                          size: 14,
-                          color: isRead ? Colors.greenAccent : Colors.white70
-                      ),
-                    ]
-                  ]
-
+              IconButton(
+                icon: const Icon(Icons.videocam),
+                onPressed: _pickVideo,
               ),
-            )
-        )
+              IconButton(
+                icon: const Icon(Icons.mic),
+                onPressed: _recordAudio,
+              ),
+              Expanded(
+                child: TextField(
+                  controller: _messageController,
+                  decoration: const InputDecoration(
+                    hintText: "Xabar yozing...",
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.send),
+                onPressed: _sendMessage,
+              ),
+            ],
+          ),
+        ],
+      ),
     );
-
   }
-
-
-
-  }
+}

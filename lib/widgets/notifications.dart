@@ -170,64 +170,91 @@ String _getSenderName(Map<String,dynamic>sender){
         print("Error rejecting request: $e");
       }
     }
-
-    Widget _buildFriendRequestList() {
-      if (_friendRequests.isEmpty) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Text('No friend requests available'),
-        );
-      }
-      return Column(
-        children: _friendRequests.map((request) {
-          return GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      ProfilePage(
-                        userProfile: UserProfile(
-                          id: request.requestFromId,
-                          userName: request.userName,
-                          profileImage: request.profileImage,
-                        ),
-                      ),
-                ),
-              );
-            },
-            child: Card(
-                margin: EdgeInsets.all(8.0),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundImage: request.profileImage != null
-                        ? NetworkImage(request.profileImage!)
-                        : null,
-                    child: request.profileImage == null
-                        ? Text(request.userName[0].toUpperCase())
-                        : null,
-                  ),
-                  title: Text(request.userName ?? 'Nomalum'),
-                  subtitle: Text("Friends request"),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                          icon: Icon(Icons.check, color: Colors.green),
-                          onPressed: () => _acceptRequest(request)
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.close, color: Colors.red),
-                        onPressed: () => _rejectRequest(request),
-                      ),
-                    ],
-                  ),
-                )
-            ),
-          );
-        }).toList(),
+  Widget _buildFriendRequestList() {
+    if (_friendRequests.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+        child: Text('No friend requests available',
+            style: TextStyle(color: Colors.grey)),
       );
     }
+
+    return Column(
+      children: _friendRequests.map((request) {
+        return GestureDetector(
+          onTap: () async {
+            final fullProfile = await UserService().fetchUserProfileById(
+                request.requestFromId,
+                widget.token,
+            );
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ProfilePage(userProfile: fullProfile )
+              ),
+            );
+          },
+        child: Container(
+          margin: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                blurRadius: 6,
+                offset: Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 26,
+                backgroundImage: request.profileImage != null
+                    ? NetworkImage(ApiService().formatImageUrl(request.profileImage!))
+                    : null,
+                child: request.profileImage == null
+                    ? Text(request.userName[0].toUpperCase(),
+                    style: TextStyle(fontWeight: FontWeight.bold))
+                    : null,
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(request.userName ?? 'Nomalum',
+                        style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                    SizedBox(height: 4),
+                    Text("Friend request",
+                        style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                  ],
+                ),
+              ),
+              Row(
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.check_circle, color: Colors.green, size: 28),
+                    onPressed: () => _acceptRequest(request),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.cancel, color: Colors.red, size: 28),
+                    onPressed: () => _rejectRequest(request),
+                  ),
+                ],
+              )
+            ],
+          ),
+        ),
+        );
+      }).toList(),
+    );
+  }
+
+
 
   Widget _buildNotificationList() {
     if (_notificationList.isEmpty) {
@@ -240,6 +267,8 @@ String _getSenderName(Map<String,dynamic>sender){
         itemCount: _notificationList.length,
         itemBuilder: (context, index) {
           final notification = _notificationList[index];
+          print('Notification $index Profile Image: ${notification.sender.profileImage}');
+          print('Formatted Profile Image URL: ${ApiService().formatImageUrl(notification.sender.profileImage)}');
           if (!(notification.notificationType == 'like' ||
               notification.notificationType == 'comment' ||
               notification.notificationType == 'reply')) {
@@ -248,24 +277,36 @@ String _getSenderName(Map<String,dynamic>sender){
           return Card(
             margin: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: ListTile(
-               leading: CircleAvatar(
-                 backgroundImage: notification.sender.profileImage != null
-                     ? NetworkImage(ApiService().formatImageUrl(notification.sender.profileImage))
-                     : null,
-                 child: notification.sender.profileImage == null
-                   ? Text(
-                   (notification.sender.username != null && notification.sender.username!.isNotEmpty)
-                 ? notification.sender.username![0].toUpperCase()
-                       : "U",
-               )
-                     : null
-               ),
+                leading: CircleAvatar(
+                  radius: 25,
+                  backgroundImage: notification.sender.profileImage != null
+                      ? NetworkImage(ApiService().formatImageUrl(notification.sender.profileImage))
+                      : const AssetImage('assets/images/nouser.png') as ImageProvider,
+                ),
+                // leading: CircleAvatar(
+                //   radius: 24,
+                //   child: (notification.sender.profileImage != null && notification.sender.profileImage!.isNotEmpty)
+                //       ? ClipOval(
+                //     child: Image.network(
+                //       (notification.sender.profileImage!),
+                //       fit: BoxFit.cover,
+                //       width: 48,
+                //       height: 48,
+                //       errorBuilder: (context, error, stackTrace) {
+                //         print('Image load error: $error'); // Xato logini chop etish
+                //         return Image.asset('assets/images/nouser.png', fit: BoxFit.cover);
+                //       },
+                //     ),
+                //   )
+                //       : Image.asset('assets/images/nouser.png', fit: BoxFit.cover),
+                //   backgroundColor: Colors.grey.shade200,
+                // ),
+
                 title: Text(getNotificationText(notification)),
               subtitle: Text(notification.createdAt),
               trailing: !notification.isRead
                 ? Icon(Icons.circle,color:Colors.blue,size: 10)
                   : null,
-
               onTap: () async {
                 if(!notification.isRead) {
                   await NotificationService().markAsRead(notification.id, widget.token);

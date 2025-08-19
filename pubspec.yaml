@@ -56,6 +56,8 @@ dependencies:
   firebase_messaging: ^14.0.0
   flutter_local_notifications: ^17.2.1
   flutter_secure_storage: ^9.0.0
+  pull_to_refresh: ^2.0.0
+
 
 
   # The following adds the Cupertino Icons font to your application.
@@ -66,6 +68,12 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.13.1
+flutter_icons:
+  android: true
+  image_path: "assets/images/snaplife-logo.png"
+  adaptive_icon_background: "#ffffff"
+  adaptive_icon_foreground: "assets/images/snaplife-logo.png"
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

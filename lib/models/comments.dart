@@ -1,9 +1,11 @@
-class Comment{
+class Comment {
   final int id;
-  final String owner;
+  // final String owner;
+  final Map<String, dynamic> owner;
+  final int? profileId;
   final String post;
   final String? comment;
-  final List <Comment> replies;
+  final List<Comment> replies;
   final String? commentImage;
   final String commentDate;
   final String? ownerProfileImage;
@@ -14,6 +16,7 @@ class Comment{
   Comment({
     required this.id,
     required this.owner,
+    this.profileId,
     required this.post,
     this.comment,
     this.replies = const [],
@@ -25,19 +28,25 @@ class Comment{
     this.isLiked = false,
   });
 
-  factory Comment.fromJson(Map<String,dynamic>json){
+  factory Comment.fromJson(Map<String, dynamic> json) {
+    final owner = json['owner'] is Map ? json['owner']: {};
     return Comment(
-        id: json['id'],
-        owner: json['owner'].toString(),
-        post: json['post'].toString(),
-        comment: json['comment']?.toString(),
-        replies: (json['replies'] as List<dynamic>?)?.map((e) => Comment.fromJson(e)).toList() ?? [],
-        commentImage: json['comment_image']?.toString(),
-        ownerProfileImage: json['ownerProfileImage'],
-        ownerUserName: json['ownerUserName'],
-        commentDate: json['comment_date'].toString(),
-        likes: json['likes'] ?? 0,
-        isLiked: json['is_liked'] ?? false,
+      id: json['id'],
+      owner: owner,
+      profileId: owner['profile_id'] ?? null, 
+      // owner: json['owner'].toString(),
+      post: json['post'].toString(),
+      comment: json['comment']?.toString(),
+      replies: (json['replies'] as List<dynamic>?)
+              ?.map((e) => Comment.fromJson(e))
+              .toList() ??
+          [],
+      commentImage: json['comment_image']?.toString(),
+      ownerProfileImage: json['ownerProfileImage'],
+      ownerUserName: json['ownerUserName'],
+      commentDate: json['comment_date'].toString(),
+      likes: json['likes'] ?? 0,
+      isLiked: json['is_liked'] ?? false,
     );
   }
 }

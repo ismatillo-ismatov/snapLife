@@ -26,23 +26,22 @@ class Message {
     required this.is_read,
     this.repliedTo,
   });
-
-  factory Message.fromJson(Map<String, dynamic> json) {
-    print("Parsing message JSON: $json");
-    return Message(
-      id: json['id'] ?? 0,
-      sender: ShortUserProfile.fromJson(json['sender']),
-      receiver: ShortUserProfile.fromJson(json['receiver']),
-      message: json['message'] ?? '',
-      file: json['file'],
-      type: json['type'],
-      timestamp: json['timestamp'] ?? '',
-      is_read: json['is_read'],
-      repliedTo: json['replied_to'] != null
+factory Message.fromJson(Map<String, dynamic> json) {
+  print("Parsing message JSON: $json");
+  return Message(
+    id: json['id'] ?? 0,
+    sender: ShortUserProfile.fromJson(json['sender']),
+    receiver: ShortUserProfile.fromJson(json['receiver']),
+    message: json['message'] ?? '',
+    file: json['file'],
+    type: json['type'],
+    timestamp: json['timestamp'] ?? '',
+    is_read: json['is_read'] ?? false,
+    repliedTo: json['replied_to'] != null
         ? PartialMessage.fromJson(json['replied_to'])
-          : null
-    );
-  }
+        : null,
+  );
+}
 }
 
 

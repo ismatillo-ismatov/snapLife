@@ -12,8 +12,12 @@ class ApiService {
 
   static Box? _authBox;
 
-  static const String baseUrl = 'http://192.168.100.8:8000/api';
-  static const String baseImage = 'http://192.168.100.8:8000';
+
+  static const String baseUrl = 'http://176.118.198.70/api';
+  static const String baseImage = '';
+  // static const String baseImage = 'http://176.118.198.70/';
+
+
   final storage = FlutterSecureStorage();
   Future<String?> getUserToken() async {
     var box = await Hive.openBox('authBox');
@@ -75,10 +79,6 @@ class ApiService {
 
 
 
-
-
-
-
   Future<void> saveAuthToken(String token) async {
     final box = await _getBox();
     // var box = await Hive.openBox('authBox');
@@ -119,15 +119,21 @@ class ApiService {
     print("Barcha foydalanuvchi ma'lumotlari Hive'dan o‘chirildi.");
   }
 
-
-
   String formatImageUrl(String? imagePath) {
+    print('Raw Image Path: $imagePath'); // Xom URL’ni chop etish
     if (imagePath == null || imagePath.isEmpty) {
+      print('Returning default image: https://picsum.photos/150');
       return "https://picsum.photos/150";
     }
-    if (imagePath.startsWith("/media/")) {
-      return "${baseImage}$imagePath";
+    if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
+      print('Returning full URL: $imagePath');
+      return imagePath; // To'liq URL bo'lsa, o'zgartirmasdan qaytarish
     }
+    if (imagePath.startsWith("/profile_image/") || imagePath.startsWith("/media/")) {
+      print('Formatted URL: https://storage.googleapis.com/snaplife/$imagePath');
+      return "https://storage.googleapis.com/snaplife/$imagePath"; // Google Cloud Storage yo'li
+    }
+    print('Returning unchanged: $imagePath');
     return imagePath;
   }
 

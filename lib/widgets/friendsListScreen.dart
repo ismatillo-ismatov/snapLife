@@ -80,7 +80,6 @@ class _FriendListScreenState extends State<FriendListScreen> {
                     return FriendListItem(friend: friend);
                   },
                 ),
-
               );
             }
         )

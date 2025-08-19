@@ -1,3 +1,4 @@
+import 'package:ismatov/api/api_service.dart';
 import 'package:ismatov/models/post.dart';
 
 class NotificationModel {
@@ -55,11 +56,15 @@ class MiniProfile{
     this.username,
     this.profileImage,
 });
-  factory MiniProfile.fromJson(Map<String,dynamic> json ){
+  factory MiniProfile.fromJson(Map<String, dynamic> json) {
+    String? profileImage = json['profile_image'] ?? json['profileImage'];
+    if (profileImage != null && profileImage.startsWith('/')) {
+      profileImage = profileImage.substring(1); // Oldidagi / ni olib tashlash
+    }
     return MiniProfile(
-        id: json['id'],
-      username: json['username'] ?? json['username'] ?? json['user_name'],
-      profileImage: json['profileImage'],
+      id: json['id'] ?? 0,
+      username: json['username'] ?? json['userName'] ?? json['user_name'] ?? '',
+      profileImage: profileImage,
     );
   }
 
