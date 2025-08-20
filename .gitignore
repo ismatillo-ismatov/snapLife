@@ -1,0 +1,4 @@
+*.env
+# Firebase service account keys
+backend/fcm/ismatov-app-firebase-adminsdk-*.json
+
