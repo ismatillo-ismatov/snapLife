@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "111423081142",
+    "project_id": "ismatov-app",
+    "storage_bucket": "ismatov-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:111423081142:android:8bba952c3a159223c6f417",
+        "android_client_info": {
+          "package_name": "com.example.ismatov"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDioqbF6IIg0K3k-C4k5osPJNEbFzTT3nY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
