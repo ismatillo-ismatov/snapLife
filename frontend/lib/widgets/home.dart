@@ -57,22 +57,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // Future<void> loadingFriendPosts() async {
-  //   try {
-  //     final data = await PostService().fetchFriendPosts(widget.token);
-  //     final posts = data.map((e) => Post.fromJson(e)).toList();
-  //     posts.shuffle();
-  //     setState(() {
-  //       friendPosts = posts;
-  //       isLoading = false;
-  //     });
-  //   } catch (e) {
-  //     print("Error loading posts: $e");
-  //     setState(() {
-  //       isLoading = false;
-  //     });
-  //   }
-  // }
 
   void handleLike(Post updatePost) {
     final index = friendPosts.indexWhere((p) => p.id == updatePost.id);
@@ -121,20 +105,50 @@ class _PostItem extends StatefulWidget {
   State<_PostItem> createState() => _PostItemState();
 }
 
-class _PostItemState extends State<_PostItem> {
+class _PostItemState extends State<_PostItem> with SingleTickerProviderStateMixin {
   bool isLiked = false;
   bool isExpanded = false;
-
+  bool showBigHeart = false;
+  late AnimationController _likeController;
+  late Animation<double> _scaleAnimation;
   @override
   void initState() {
     super.initState();
     isLiked = widget.post.liked;
+    _likeController = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: 250),
+       );
+       _scaleAnimation = Tween<double>(begin: 1.0,end: 1.4)
+       .chain(CurveTween(curve: Curves.easeOut))
+       .animate(_likeController);
+  }
+
+  @override
+  void dispose() {
+    _likeController.dispose();
+    super.dispose();
+  }
+
+  void handDoubleTap() {
+    setState(() {
+      isLiked = true;
+      showBigHeart = true;
+    });
+    Future.delayed(const Duration(milliseconds: 700), () {
+      setState(() {
+        showBigHeart = false;
+      });
+    });
   }
 
   void handleLike() async {
     if (widget.token.isEmpty) return;
     try {
       bool wasLiked = widget.post.liked;
+
+      _likeController.forward().then((_) => _likeController.reverse());
+
       final updatePost = await PostService().toggleLike(
           postId: widget.post.id,
           isLiked: widget.post.liked,
@@ -172,7 +186,7 @@ class _PostItemState extends State<_PostItem> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Row(
               children: [
-                               GestureDetector(
+                 GestureDetector(
                   onTap: () async {
                     print("Profil sahifasiga o'tish");
                     final userId = post.profileId ?? 0;
@@ -198,7 +212,6 @@ class _PostItemState extends State<_PostItem> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text("Profilni yuklashda xato: $e")),
                       );
-                      // Fallback: Mahalliy ma'lumotlardan foydalanamiz
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -224,40 +237,6 @@ class _PostItemState extends State<_PostItem> {
                             as ImageProvider,
                   ),
                 ),
-                // GestureDetector(
-                //   onTap: () {
-                //     print("Profil sahifasiga o'tish");
-                //     final userId = post.ownerId ?? 0;
-                //     if (userId == 0) {
-                //       ScaffoldMessenger.of(context).showSnackBar(
-                //         SnackBar(content: Text("Foydalanuvchi ID si topilmadi")),
-                //       );
-                //       return;
-                //     }
-                //     Navigator.push(
-                //       context,
-                //       MaterialPageRoute(
-                //         builder: (context) => ProfilePage(
-                //           userProfile: UserProfile(
-                //             id: userId,
-                //             userName: userName,
-                //             profileImage: profileImage != null
-                //                 ? ApiService().formatImageUrl(profileImage)
-                //                 : null,
-                //             posts: [post], // Joriy postni qo'shish
-                //           ),
-                //         ),
-                //       ),
-                //     );
-                //   },
-                //   child: CircleAvatar(
-                //     radius: 25.r,
-                //     backgroundImage: profileImage != null
-                //         ? NetworkImage(ApiService().formatImageUrl(profileImage))
-                //         : const AssetImage('assets/images/nouser.png')
-                //             as ImageProvider,
-                //   ),
-                // ),
                 const SizedBox(width: 10),
                 Text(
                   userName,
@@ -270,6 +249,10 @@ class _PostItemState extends State<_PostItem> {
               ],
             ),
           ),
+          GestureDetector(
+            onDoubleTap: handDoubleTap,
+            child: Stack(
+              children: [          
           if (hasVideo)
             AspectRatio(
               aspectRatio: 9 / 16,
@@ -288,6 +271,18 @@ class _PostItemState extends State<_PostItem> {
               height: 400.h,
               color: Colors.black12,
             ),
+            AnimatedOpacity(
+              duration: Duration(milliseconds: 300),
+              opacity: showBigHeart ? 1 : 0,
+              child: Icon(
+                Icons.favorite,
+                size: 120,
+                color: Colors.white.withOpacity(0.9),
+              ),
+               )
+              ]
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
@@ -313,7 +308,9 @@ class _PostItemState extends State<_PostItem> {
                   ),
                 Row(
                   children: [
-                    IconButton(
+                    ScaleTransition(
+                      scale: _scaleAnimation, 
+                  child:   IconButton(
                       onPressed: handleLike,
                       icon: Icon(
                         widget.post.liked
@@ -323,6 +320,7 @@ class _PostItemState extends State<_PostItem> {
                         size: 35,
                       ),
                     ),
+                ),
                     Text(
                       "${widget.post.likeCount}",
                       style: const TextStyle(color: Colors.black),

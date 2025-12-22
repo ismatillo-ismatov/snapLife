@@ -23,6 +23,44 @@
           "other_platform_oauth_client": []
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:111423081142:android:f9cafe3b9cf7179ac6f417",
+        "android_client_info": {
+          "package_name": "com.example.my_snaplife"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDioqbF6IIg0K3k-C4k5osPJNEbFzTT3nY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:111423081142:android:f5c0cd88cc611062c6f417",
+        "android_client_info": {
+          "package_name": "uz.snaplife.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDioqbF6IIg0K3k-C4k5osPJNEbFzTT3nY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
     }
   ],
   "configuration_version": "1"
