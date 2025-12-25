@@ -80,42 +80,6 @@ class UserService {
     }
   }
 
-  // Future<UserProfile> loginUser(String username, String password) async {
-  //   try {
-  //     final response = await http.post(
-  //       Uri.parse('${ApiService.baseUrl}/token-login'),
-  //       headers: <String, String>{
-  //         'Content-Type': 'application/json',
-  //       },
-  //       body: json.encode({
-  //         'username': username,
-  //         'password': password,
-  //       }),
-  //     );
-  //     if (response.statusCode == 200) {
-  //       final responseData = json.decode(response.body);
-  //       print('Response data: $responseData');
-  //       final token = responseData['token'];
-  //       await saveAuthToken(token);
-  //       var verifiedToken = await getAuthToken();
-  //       print("login successfully,  Token verified: ${verifiedToken != null}");
-
-  //       final fcmToken = await FirebaseMessaging.instance.getToken();
-  //       print("📲 Login paytida FCM token: $fcmToken");
-  //       if (fcmToken != null) {
-  //         await ApiService().saveFCMToken(fcmToken);
-  //       }
-
-  //       return await fetchUserProfile(token);
-  //     } else {
-  //       throw Exception('login failed');
-  //     }
-  //   } catch (e) {
-  //     print('Error in loginUser: $e');
-  //     rethrow;
-  //   }
-  // }
-
   Future<UserProfile> fetchUserProfile(String token) async {
     final response = await http.get(
       Uri.parse('${ApiService.baseUrl}/my-profile/'),
@@ -308,22 +272,6 @@ class UserService {
     }
   }
 
-  // Future<void> logout() async {
-  //   try {
-  //     await clearAuthToken();
-  //     try {
-  //       var userBox = await Hive.openBox('userBox');
-  //       await userBox.clear();
-  //       print("userBox clear successfully");
-  //     } catch (e) {
-  //       print("Error clearing userBox $e");
-  //     }
-  //     print("user logged out successfully");
-  //   } catch (e) {
-  //     print("Error during logout: $e");
-  //     throw Exception('login failed');
-  //   }
-  // }
 
   Future<void> updateUserProfile({
     required String userName,

@@ -94,7 +94,6 @@ class _ChatPageState extends State<ChatPage> {
     },
   );
 
-  // Chatni ochganda hammasini o‘qilgan deb belgilash
   if (_token != null) {
     unawaited(_messageService.markAllAsRead(
       senderId: widget.receiver,
@@ -239,7 +238,6 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Future<void> _recordAudio() async {
-    // TODO: implement audio record and send
   }
 
   Future<void> _sendMediaMessage(String filePath, String type) async {

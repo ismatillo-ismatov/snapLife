@@ -41,8 +41,6 @@ class FriendListItem extends StatelessWidget{
           style: const TextStyle(fontWeight: FontWeight.w500),
         ),
 
-        // trailing: _buildMessageButton(),
-        // onTap: onTap,
     );
   }
 
@@ -56,7 +54,6 @@ class FriendListItem extends StatelessWidget{
               ? const Icon(Icons.person,size:24)
                 : null,
           ),
-          // if(friend.isOnline) _buildOnlineIndicator(context),
         ],
       );
     }
@@ -80,18 +77,7 @@ class FriendListItem extends StatelessWidget{
       return const AssetImage('assets/images/nouser.png');
     }
   }
-    // ImageProvider? _getProfileImage() {
-    //   print("Profile image URL: ${friend.profileImage}");
-    // if (friend.profileImage == null || friend.profileImage!.isEmpty){
-    //   return const AssetImage('assets/images/nouser.png');
-    // }
-    // Uri? uri = Uri.tryParse(friend.profileImage!);
-    // if (uri == null || !uri.hasAbsolutePath || uri.host.isNotEmpty){
-    //   return const AssetImage('assets/images/nouser.png');
-    // }
-    // return NetworkImage(friend.profileImage!);
-    //
-    // }
+   
 
     Widget _buildOnlineIndicator(BuildContext context) {
     return Container(
@@ -110,7 +96,6 @@ class FriendListItem extends StatelessWidget{
 
     String timeAgo(DateTime dateTime) {
     final diff = DateTime.now().difference(friend.lastActive!.toLocal());
-    // final diff = DateTime.now().toUtc().difference(friend.lastActive!.toUtc());
     if (diff.inMinutes < 60 ) return '${diff.inMinutes} minutes ego';
     if (diff.inHours < 24 ) return '${diff.inHours} Hours ego';
     return '${diff.inDays} days ago';
@@ -125,13 +110,6 @@ class FriendListItem extends StatelessWidget{
     }
 
 
-    // Widget _buildMessageButton() {
-    // return IconButton(
-    //     icon: const Icon(Icons.message_outlined),
-    //   onPressed: onTap,
-    //   tooltip: "sendMessage",
-    // );
-    // }
 
 }
 

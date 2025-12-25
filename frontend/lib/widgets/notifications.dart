@@ -283,24 +283,7 @@ String _getSenderName(Map<String,dynamic>sender){
                       ? NetworkImage(ApiService().formatImageUrl(notification.sender.profileImage))
                       : const AssetImage('assets/images/nouser.png') as ImageProvider,
                 ),
-                // leading: CircleAvatar(
-                //   radius: 24,
-                //   child: (notification.sender.profileImage != null && notification.sender.profileImage!.isNotEmpty)
-                //       ? ClipOval(
-                //     child: Image.network(
-                //       (notification.sender.profileImage!),
-                //       fit: BoxFit.cover,
-                //       width: 48,
-                //       height: 48,
-                //       errorBuilder: (context, error, stackTrace) {
-                //         print('Image load error: $error'); // Xato logini chop etish
-                //         return Image.asset('assets/images/nouser.png', fit: BoxFit.cover);
-                //       },
-                //     ),
-                //   )
-                //       : Image.asset('assets/images/nouser.png', fit: BoxFit.cover),
-                //   backgroundColor: Colors.grey.shade200,
-                // ),
+            
 
                 title: Text(getNotificationText(notification)),
               subtitle: Text(notification.createdAt),
