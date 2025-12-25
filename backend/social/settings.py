@@ -175,7 +175,6 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
 ]
 CORS_ALLOWED_ORIGINS = [
-    #"http://192.168.43.197:8000",
     "http://192.168.100.8:8000",
 ]
 CORS_ALLOW_ALL_ORIGINS = True
@@ -279,13 +278,6 @@ MEDIA_ROOT = BASE_DIR / 'media'
 UPSTASH_REDIS_REST_URL = config("UPSTASH_REDIS_REST_URL")
 UPSTASH_REDIS_REST_TOKEN = config("UPSTASH_REDIS_REST_TOKEN")
 
-#
-# STATIC_URL = '/static/'
-# STATIC_ROOT = BASE_DIR / 'staticfiles'
-# STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-# MEDIA_URL = '/media/'
-# MEDIA_ROOT = os.path.join(BASE_DIR,'media')
-# MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field

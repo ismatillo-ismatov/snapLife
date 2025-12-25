@@ -7,12 +7,6 @@ from .models import UserProfile
 from rest_framework import serializers
 
 
-
-
-
-
-
-
 class ProfileSerializer(serializers.ModelSerializer):
     is_online = serializers.BooleanField(read_only=True)
     last_activity = serializers.DateTimeField(read_only=True)
@@ -44,10 +38,10 @@ class EditProfileSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         username = validated_data.pop('username',None)
         if username:
-            print("⚙️ Username update requested:", username)
+            print(" Username update requested:", username)
             user = instance.userName
-            print("👤 Old username:", user.username)
+            print("Old username:", user.username)
             user.username = username
             user.save()
-            print("✅ Username updated:", user.username)
+            print("Username updated:", user.username)
         return  super().update(instance,validated_data)

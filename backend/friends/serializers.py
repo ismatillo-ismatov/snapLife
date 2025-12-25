@@ -20,7 +20,6 @@ class FriendRequestSerializer(serializers.ModelSerializer):
 
 
     def get_request_to(self,obj):
-        # user = obj.request_to.userName
         return {
             "id": obj.request_to.userName.id,
             "username": obj.request_to.userName.username,
@@ -43,8 +42,6 @@ class FriendRequestSerializer(serializers.ModelSerializer):
 
 
 
-    # def create(self,validated_data):
-    #     validated_data['request_from'] = self.context['request'].user.profile
-    #     return super().create(validated_data)
+
 
 

@@ -17,10 +17,5 @@ class MiniProfileSerializer(serializers.ModelSerializer):
             return obj.profile.profileImage.url
         return None
 
-    # def get_profileImage(self,obj):
-    #     if obj.profileImage:
-    #         request = self.context.get('request')
-    #         return request.build_absolute_uri(obj.profile.profileImage.url)
-    #     return None
 
 

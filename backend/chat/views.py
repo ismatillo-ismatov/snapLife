@@ -152,13 +152,6 @@ class MessageViewSet(viewsets.ModelViewSet):
         return Response(self.get_serializer(instance).data,status=status.HTTP_201_CREATED)
 
 
-        # message_data = serializer.data
-        #
-        #
-        # redis_client.publish('chat_channel',json.dumps(message_data))
-        # print("Redisga yuborildi:",message_data)
-
-        # return Response(serializer.data,status=status.HTTP_201_CREATED)
 
 
     @action(detail=False, methods=["get"])

@@ -35,8 +35,3 @@ class Message(models.Model):
     class Meta:
         ordering = ("timestamp",)
 
-# def post_user_massage_signal(sender,instance,created,**kwargs):
-#     if created:
-#         Message.objects.create(user=instance)
-#
-# post_save.connect(post_user_massage_signal,sender=User)

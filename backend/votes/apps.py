@@ -9,5 +9,3 @@ class VotesConfig(AppConfig):
         import notification.signals
 
 
-    # def ready(self):
-    #     import votes.signals
